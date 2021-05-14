@@ -1,4 +1,4 @@
-//SECCION DE VARIABLES DE CONSULTA
+//SECCIÓN DE VARIABLES DE CONSULTA
 const productVariableQuery = async (productID) => {
   return {
     "id":productID
@@ -23,7 +23,7 @@ const customerVariableQuery = async (customerID) => {
   }
 };
 
-const customerVIPvariableQuery = async(queryString) =>{
+const customerVIPVariableQuery = async(queryString) =>{
   return {
     "query":queryString
   }
@@ -43,7 +43,7 @@ const collectionWithProductVariableQuery = async(collectionId,productCount) => {
 };
 
 
-//SECCION DE VARIABLES DE ESCRITURA O MUTACIONES
+//SECCIÓN DE VARIABLES DE ESCRITURA O MUTACIONES
 const customerVariableMutationCreate = async (email,firstName,lastName,phone1,phone2,address1,city,id = null) => {
   let input = {};
   if(id != null){
@@ -214,7 +214,7 @@ module.exports = {
   productVariantVariableQuery,
   inventoryVariableQuery,
   customerVariableQuery,
-  customerVIPvariableQuery,
+  customerVIPVariableQuery,
   collectionVariableQuery,
   collectionWithProductVariableQuery,
 

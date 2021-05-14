@@ -23,12 +23,12 @@ const createCustomerVIPType = async (tag) => {
     if(isCreated == undefined){
       const creation = await insertCustomerVIPType(VIPType,null);
       if(creation){
-        console.log('Referencia de tipo de cliente VIP creado con exito!');
+        console.log('Referencia de tipo de cliente VIP creado con éxito!');
       }else{
         console.log('No se pudo crear referencia de tipos de clientes VIP')
       }
     }else{
-      console.log('Exite referencia de tipo de cliente VIP');
+      console.log('Existe referencia de tipo de cliente VIP');
     }
     return creation;
   }catch(err){

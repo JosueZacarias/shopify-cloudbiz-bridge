@@ -6,12 +6,14 @@ const fetch = require('node-fetch');
 const { Headers } = require('cross-fetch');
 const { GraphQLClient, gql } = require('graphql-request');
 const {
-  getProductFirestore,
-  getCustomerFirestore,
+  getProductRelationship,
+  getCustomerRelationship,
   insertProductRelationship,
   insertCustomerRelationship,
+  insertLastCollectionSubId,
   deleteProductRelationship,
   deleteCustomerRelationship,
+  getLastCollectionSubId
 } = require('./firestoreQuery.js');
 
 const {
@@ -162,7 +164,7 @@ const updateCustomer = async (ctx,token) => {
   var phone_1 = '';
   try{
     shopifyCustomerID = ctx.request.body.admin_graphql_api_id;
-    const customerReference = await getCustomerFirestore(shopifyCustomerID,null);
+    const customerReference = await getCustomerRelationship(shopifyCustomerID,null);
     if(customerReference){
       const contactID = customerReference.cloudbizReference.toString()
       if(ctx.request.body.addresses.length > 0){
@@ -631,8 +633,8 @@ const updateProduct = async (ctx,token) => {
 
 const deleteProduct = async (ctx,token) => {
   try{
-    const productID = 'gid://shopify/Product/'+ctx.request.body.id;
-    const productSavedDocs = await getProductFirestore(productID,null,null);
+    const productID = ctx.request.body.admin_graphql_api_id;
+    const productSavedDocs = await getProductRelationship(productID,null,null);
     productSavedDocs.forEach(async(item, i) => {
       var dataDoc = item.data();
       var response = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/item/'+dataDoc.cloudbizReference,{
@@ -656,8 +658,16 @@ const deleteProduct = async (ctx,token) => {
 const createCategory = async(ctx,token) => {
   try{
     var createCollectionStatus = false;
+    var lastIdAI = await getLastCollectionSubId();
+    var actualId = '00';
+    if(lastIdAI){
+      actualId = lastIdAI.ai.toString();
+    }
     const categoryData = {
-
+      "code": "4121"+actualId,
+      "name": ctx.request.body.title,
+      "description": ctx.request.body.body_html,
+      "parent_id": 91727
     };
     const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/category',{
       method:'POST',
@@ -672,9 +682,14 @@ const createCategory = async(ctx,token) => {
       const saveCollectionRelationShip = await insertCollectionRelationship(ctx.request.body.admin_graphql_api_id,response.id);
       if(saveCollectionRelationShip){
         createCollectionStatus = true;
+        const idAI = parseInt(lastIdAI.ai);
+        var newIdAI = idAI++;
+        if(newIdAI < 10){
+          newIdAI = '0'+newIdAI.toString();
+        }
+        await insertLastCollectionSubId(newIdAI);
       }
     }
-
     return createCollectionStatus;
   }catch(err){
     console.log(err);
@@ -684,10 +699,13 @@ const createCategory = async(ctx,token) => {
 const updateCategory = async(ctx,token) => {
   try{
     var updateCollectionStatus = false;
+    const id = ctx.request.body.admin_graphql_api_id;
+    const categoryId = await getCollectionRelationship(id,null);
     const categoryData = {
-
+      "name":ctx.request.body.title,
+      "description":ctx.request.body.body_html
     };
-    const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/category',{
+    const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/category/'+categoryId.cloudbizReference,{
       method:'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -711,7 +729,7 @@ const deleteCategory = async(ctx,token) => {
     var deleteStatus = false;
     const id = ctx.request.body.admin_graphql_api_id;
     const categoryID = await getCollectionRelationship(id,null);
-    const response = await fetch('https://api.micloudbiz.com/v1/category/'+categoryID,{
+    const response = await fetch('https://api.micloudbiz.com/v1/category/'+categoryID.cloudbizReference,{
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -804,6 +822,90 @@ const getCustomerInfoFromCloudbiz = async (token,customerID) => {
   return response;
 };
 
+const getCategoryInfoFromCloudbiz = async (token,categoryID) => {
+  const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/category/'+categoryID,{
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'token': token
+    }
+  });
+  const response = await resp.json();
+  return response;
+};
+
+const getWarehouseInfoFromCloudbiz = async (token,warehouseID) => {
+  const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/warehouse/'+warehouseID,{
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'token': token
+    }
+  });
+  const response = await resp.json();
+  return response;
+};
+
+const getTaxInfoFromCloudbiz = async (token,taxID) => {
+  const resp = await fetch('https://api.micloudbiz.com/v1/tax/'+taxID,{
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'token': token
+    }
+  });
+  const response = await resp.json();
+  return response;
+};
+
+const getDiscountInfoFromCloudbiz = async (token,discountID) => {
+  const resp = await fetch('https://api.micloudbiz.com/v1/discount/'+discountID,{
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'token': token
+    }
+  });
+  const response = await resp.json();
+  return response;
+};
+
+const getUnitInfoFromCloudbiz = async (token,unitID) => {
+  const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/unit/'+unitID,{
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'token': token
+    }
+  });
+  const response = await resp.json();
+  return response;
+};
+
+const getPriceListInfoFromCloudbiz = async (token,priceID) => {
+  const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/price/'+priceID,{
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'token': token
+    }
+  });
+  const response = await resp.json();
+  return response;
+};
+
+const getItemInfoFromCloudbiz = async (token,itemID) => {
+  const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/item/'+itemID,{
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'token': token
+    }
+  });
+  const response = await resp.json();
+  return response;
+};
+
 module.exports = {
     getPDF,
     getToken,
@@ -819,5 +921,9 @@ module.exports = {
     createCustomerWithParams,
     callGetClients,
     graphQLClient,
-    getProductVariantUnitCost
+    getProductVariantUnitCost,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    deleteProduct
 };

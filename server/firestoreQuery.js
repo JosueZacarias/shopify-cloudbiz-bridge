@@ -33,6 +33,24 @@ const insertCollectionRelationship = async (shopifyCollectionID,cloudbizCollecti
   return res.id;
 };
 
+const insertLastCollectionSubId = async (subId) => {
+  const res = await database.collection('collection').doc('lastAI').set({
+    ai: subId.toString()
+  });
+  return res.id;
+};
+
+const getLastCollectionSubId = async () => {
+  const lastIdRef = database.collection('collection').doc('lastAI');
+  const id = await lastIdRef.get();
+  if(!id.exists){
+    console.log('Documento no encontrado');
+    return false;
+  }
+  data = id.docs[0].data();
+  return data;
+};
+
 const getCustomerVIPTypeRelationship = async (shopifyCustomerVIPID,cloudbizCustomerVIPID) => {
   var whereID = 'shopifyReference';
   var searchID = '';
@@ -200,11 +218,13 @@ module.exports = {
   insertProductRelationship,
   insertCustomerVIPTypeRelationship,
   insertCollectionRelationship,
+  insertLastCollectionSubId,
 
   getCustomerVIPTypeRelationship,
   getCollectionRelationship,
   getCustomerRelationship,
   getProductRelationship,
+  getLastCollectionSubId,
   
   deleteCustomerRelationship,
   deleteProductRelationship,

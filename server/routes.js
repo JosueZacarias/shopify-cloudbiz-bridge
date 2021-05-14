@@ -15,15 +15,19 @@ const {
   getInvoiceWithId,
   getCustomerIdWithEmail,
   createCustomerWithParams,
-  callGetClients
+  callGetClients,
+  createCategory,
+  deleteProduct
 } = require('./apiClient');
-const { customerRelationship } = require('./firebaseInsert.js');
 const {
   getProductFirestore,
   getCustomerFirestore,
   deleteCustomerRelationship,
 } = require('./firestoreQuery.js');
-const {getProductByIDQuery,getInventoryByIDQuery } = require('./query.js');
+const {
+  getProductByIDQuery,
+  getInventoryByIDQuery 
+} = require('./query.js');
 
 //EndPoints Terminados Inicio
 customRouter.get('/api/v1/invoice/getInvoice',
@@ -48,9 +52,9 @@ customRouter.get('/api/v1/invoice/getInvoice',
       }
 
     }else{
-      console.log('Error al optener la factura');
+      console.log('Error al obtener la factura');
       ctx.status = 404;
-      ctx.body = 'Error al optener la factura';
+      ctx.body = 'Error al obtener la factura';
     }
   }
 );
@@ -62,9 +66,9 @@ customRouter.post('/api/v1/customer/createCustomer',
     const token = await getToken();
     const customer = await createCustomer(ctx,token);
     if(customer){
-      console.log('Contacto creado con exito con id: '+ customer.id);
+      console.log('Contacto creado con éxito con id: '+ customer.id);
     }else{
-      console.log('Error en la creacion de contacto');
+      console.log('Error en la creación de contacto');
     }
   }
 );
@@ -106,7 +110,7 @@ customRouter.post('/api/v1/invoice/createInvoice',
     ctx.status = 200;
     const token = await getToken();
     const email = ctx.request.body.email;
-    const subject = 'Facura generado para el cliente: ';
+    const subject = 'Factura generado para el cliente: ';
     const emailBody = '<p><b>Su factura ha sido creado</b></p>';
     const shopifyCustomerID = ctx.request.body.customer.admin_graphql_api_id;
     const customerReference = await getCustomerFirestore(shopifyCustomerID,null);
@@ -184,11 +188,11 @@ customRouter.post('/api/v1/invoice/createInvoice',
           console.log('Error al intentar enviar factura por correo');
         }
       }else{
-        console.log('Error al optener la factura');
+        console.log('Error al obtener la factura');
       }
     }).catch((err) => {
       if(err){
-        console.log('Ocurrio un error al crear factura ' + err);
+        console.log('Ocurrió un error al crear factura ' + err);
       }
     });
   }
@@ -200,9 +204,9 @@ customRouter.post('/api/v1/inventory/createProduct',
     const token = await getToken();
     const create = await createProduct(ctx,token);
     if(create){
-      console.log('Item o producto creado con exito');
+      console.log('Item o producto creado con éxito');
     }else{
-      console.log('Error en la creacion de Item o Producto');
+      console.log('Error en la creación de Item o Producto');
     }
   }
 );
@@ -224,9 +228,9 @@ customRouter.post('/api/v1/inventory/deleteProduct',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
-    const deleteProduct = await deleteProduct(ctx,token);
-    if(deleteProduct){
-      console.log('Item o product Eliminado con exito');
+    const delProduct = await deleteProduct(ctx,token);
+    if(delProduct){
+      console.log('Item o product Eliminado con éxito');
     }else{
       console.log('Error al intentar eliminar Item o producto');
     }
@@ -254,9 +258,9 @@ customRouter.post('/api/v1/category/createCategory',
     const token = await getToken();
     const result = await createCategory(ctx,token);
     if(result){
-      console.log('Creacion de catergoria o coleccion realizado con éxito!!');
+      console.log('Creación de categoría o colección realizado con éxito!!');
     }else{
-      console.log('Error al crear categoria o coleccion');
+      console.log('Error al crear categoría o colección');
     }
   }
 );
@@ -267,9 +271,9 @@ customRouter.post('/api/v1/category/updateCategory',
     const token = await getToken();
     const result = await updateCategory(ctx,token);
     if(result){
-      console.log('Actualizacion de catergoria o coleccion realizado con éxito!!');
+      console.log('Actualización de categoría o colección realizado con éxito!!');
     }else{
-      console.log('Error al actualizar categoria o coleccion');
+      console.log('Error al actualizar categoría o colección');
     }
   }
 );
@@ -280,9 +284,9 @@ customRouter.post('/api/v1/category/deleteCategory',
     const token = await getToken();
     const result = await deleteCategory(ctx,token);
     if(result){
-      console.log('Eliminacion de catergoria o coleccion realizado con éxito!!');
+      console.log('Eliminación de categoría o colección realizado con éxito!!');
     }else{
-      console.log('Error al eliminar categoria o coleccion');
+      console.log('Error al eliminar categoría o colección');
     }
   }
 );
@@ -292,9 +296,9 @@ customRouter.post('/api/v1/customer/createCustomerGroup',
     const token = await getToken();
     const result = await createCustomerGroup(ctx,token);
     if(result){
-      console.log('Creacion de grupo de clientes creado con exito');
+      console.log('Creación de grupo de clientes creado con éxito');
     }else{
-      console.log('Error en la creacion de grupo de clientes');
+      console.log('Error en la creación de grupo de clientes');
     }
   }
 );
@@ -304,7 +308,7 @@ customRouter.post('/api/v1/customer/updateCustomerGroup',
     const token = await getToken();
     const result = await updateCustomerGroup(ctx,token);
     if(result){
-      console.log('Actualizacion de grupo de clientes creado con exito');
+      console.log('Actualización de grupo de clientes creado con éxito');
     }else{
       console.log('Error al actualizar grupo de clientes');
     }
@@ -316,9 +320,9 @@ customRouter.post('/api/v1/customer/deleteCustomerGroup',
     const token = await getToken();
     const result = await deleteCustomerGroup(ctx,token);
     if(result){
-      console.log('Eliminacion de grupo de clientes creado con exito');
+      console.log('Eliminación de grupo de clientes creado con éxito');
     }else{
-      console.log('Error de eliminacion de grupo de clientes');
+      console.log('Error de eliminación de grupo de clientes');
     }
   }
 );
