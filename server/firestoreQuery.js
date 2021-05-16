@@ -47,7 +47,8 @@ const getLastCollectionSubId = async () => {
     console.log('Documento no encontrado');
     return false;
   }
-  data = id.docs[0].data();
+  console.log(id.docs);
+  data = id.docs.data();
   return data;
 };
 

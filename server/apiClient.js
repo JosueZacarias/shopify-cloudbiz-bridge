@@ -4,7 +4,7 @@ const dotenv = require("dotenv");
 const axios = require('axios');
 const fetch = require('node-fetch');
 const { Headers } = require('cross-fetch');
-const { GraphQLClient, gql } = require('graphql-request');
+const { GraphQLClient } = require('graphql-request');
 const {
   getProductRelationship,
   getCustomerRelationship,
@@ -13,7 +13,10 @@ const {
   insertLastCollectionSubId,
   deleteProductRelationship,
   deleteCustomerRelationship,
-  getLastCollectionSubId
+  getLastCollectionSubId,
+  insertCollectionRelationship,
+  deleteCollectionRelationship,
+  getCollectionRelationship
 } = require('./firestoreQuery.js');
 
 const {
@@ -26,6 +29,11 @@ const {
 
 global.Headers = global.Headers || Headers;
 
+
+/*******************************************************/
+/*********      FUNCIONES COMPLEMENTARIAS      *********/
+/*******************************************************/
+//Token para peticiones a CloudBiz
 const getToken = async () => {
     try {
       dotenv.config();
@@ -43,7 +51,45 @@ const getToken = async () => {
         console.error(err);
     }
 };
+//convertir contenido HTML a PDF
+const getPDF = async (htmlContent) => {
+  const htmlToPDF = new HTMLToPDF(htmlContent);
+  try {
+    const pdf = await htmlToPDF.convert();
+    return pdf;
+  } catch (err) {
+    console.log('Error al convertir a PDF');
+  }
+};
+//Cambiar el remitente ya para producción
+const sendEmail = async (subject,mailBody,toAddresses,pdf) => {
+  let transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        type: 'OAuth2',
+        user: process.env.MAIL_USERNAME,
+        clientId: process.env.OAUTH_CLIENT_ID,
+        clientSecret: process.env.OAUTH_CLIENT_SECRET,
+        refreshToken: process.env.OAUTH_REFRESH_TOKEN,
+        accessToken: process.env.ACCESS_TOKEN,
+        expires: 1484314697598
+      }
+    });
+  let attachments = { filename: "factura.pdf", content: pdf }
+  const mailOptions = {
+    from: "INVERSIONES ZACARÍAS <josuej.zacariasg@gmail.com>",
+    to: toAddresses,
+    subject: subject,
+    html:mailBody,
+    attachments
+  };
 
+  let mail = await transporter.sendMail(mailOptions);
+  return mail.messageId;
+};
+//Obtener factura con ID de cloudBiz
 const getInvoiceWithId = async (token,invoiceId) => {
   try{
     const resp = await axios.get('https://apinode.micloudbiz.com/gateway-api/v1/print/document/invoice/'+invoiceId,{
@@ -56,7 +102,40 @@ const getInvoiceWithId = async (token,invoiceId) => {
     console.log(err);
   }
 };
+//Consultas informativas a SHOPIFY
+const graphQLClient = async (query,variables) => {
+  try{
+    const graphqlQuery = new GraphQLClient(`https://${process.env.SHOP_NAME}/admin/api/2021-04/graphql.json`,{
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': process.env.ACCESS_TOKEN_SHOPIFY
+      }
+    });
+    const queryData = await graphqlQuery.request(query,variables);
+    return queryData;
+  }catch(err){
+    console.log(err);
+  }
 
+};
+
+const getCategoriesExistsCodes = async (token) => {
+  try{
+    const allCategories = await getAllCategoryInfoFromCloudbiz(token);
+    let codes = [];
+    allCategories.subcategories.forEach((item,i) => {
+      codes.push(item.code);
+    });
+    return codes;
+  }catch(err){
+    console.log(err);
+  }
+};
+
+/**************************************/
+/*********      CLIENTES      *********/
+/**************************************/
+//consultar cliente con correo electrónico
 const getCustomerIdWithEmail = async (token,email) => {
   try{
     let contact = null;
@@ -74,40 +153,7 @@ const getCustomerIdWithEmail = async (token,email) => {
     console.log(err);
   }
 };
-
-const createCustomerWithParams = async (token,params) => {
-  try{
-    var customerData = {
-      is_active : 1,
-      seller_id: null,
-      discount_id: null,
-      is_client: 1,
-      is_vendor: 0,
-      balance_in_favor: 0,
-      full_name: params.full_name,
-      tax_number: '',
-      email: params.email,
-      city: params.city,
-      address: params.address,
-      phone_1: params.phone_1,
-      phone_2: params.phone_2,
-      mobile_phone: params.phone,
-      notes: params.note,
-      persons: []
-    };
-    const resp = await axios.post('https://api.micloudbiz.com/v1/contact',customerData,{
-        headers: {
-          'Content-Type': 'application/json',
-          'token': token
-        }
-      }
-    );
-    return resp.data;
-  }catch(err){
-    console.log(err);
-  }
-};
-
+//Crear cliente en cloudBiz
 const createCustomer = async (ctx,token) => {
   var city = '';
   var address = '';
@@ -157,7 +203,7 @@ const createCustomer = async (ctx,token) => {
   }
 
 };
-
+//Actualizar datos del cliente en cloudBiz
 const updateCustomer = async (ctx,token) => {
   var city = '';
   var address = '';
@@ -208,7 +254,7 @@ const updateCustomer = async (ctx,token) => {
     console.log(err);
   }
 };
-
+//Eliminar cliente en cloudBiz
 const deleteCustomer = async (token,contactID) => {
   try{
     const response = await fetch('https://api.micloudbiz.com/v1/contact/'+contactID,{
@@ -225,7 +271,9 @@ const deleteCustomer = async (token,contactID) => {
   }
 };
 
-//Sección relacionado a los descuentos en cloudbiz
+//Esta sección está relacionada con los descuentos en cloudBiz
+
+//Crear grupo de clientes
 const createCustomerGroup = async (ctx,token) => {
   try{
 
@@ -233,7 +281,7 @@ const createCustomerGroup = async (ctx,token) => {
     console.log(err);
   }
 };
-
+//Actualizar grupo de clientes
 const updateCustomerGroup = async (ctx,token) => {
   try{
 
@@ -241,7 +289,7 @@ const updateCustomerGroup = async (ctx,token) => {
     console.log(err);
   }
 };
-
+//Eliminar grupo de clientes
 const deleteCustomerGroup = async (ctx,token) => {
   try{
 
@@ -250,51 +298,15 @@ const deleteCustomerGroup = async (ctx,token) => {
   }
 };
 
-const getPDF = async (htmlContent) => {
-   const htmlToPDF = new HTMLToPDF(htmlContent);
-
-   try {
-     const pdf = await htmlToPDF.convert();
-     return pdf;
-   } catch (err) {
-     console.log('Error al convertir a PDF');
-   }
- };
-
-//Cambiar el remitente ya para producción
-const sendEmail = async (subject,mailBody,toAddresses,pdf) => {
-  let transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: {
-        type: 'OAuth2',
-        user: process.env.MAIL_USERNAME,
-        clientId: process.env.OAUTH_CLIENT_ID,
-        clientSecret: process.env.OAUTH_CLIENT_SECRET,
-        refreshToken: process.env.OAUTH_REFRESH_TOKEN,
-        accessToken: process.env.ACCESS_TOKEN,
-        expires: 1484314697598
-      }
-    });
-  let attachments = { filename: "factura.pdf", content: pdf }
-  const mailOptions = {
-    from: "INVERSIONES ZACARÍAS <josuej.zacariasg@gmail.com>",
-    to: toAddresses,
-    subject: subject,
-    html:mailBody,
-    attachments
-  };
-
-  let mail = await transporter.sendMail(mailOptions);
-  return mail.messageId;
-};
+/*****************************************/
+/*********      FACTURACIÓN      *********/
+/*****************************************/
 
 //Tengo que corregir los datos de los productos que vienen de shopify
 const createInvoice = async (ctx,token,contactID) => {
   try{
     if(ctx.request.body.confirmed && ctx.request.body.financial_status == 'paid'){
-      const email = 'jeffryj.zacarias@gmail.com';//ctx.request.body.email;
+      const email = ctx.request.body.email;
       const subject = 'Factura generado para el cliente: ';
       const emailBody = '<p><b>Su factura ha sido creado</b></p>';
       var cDate = new Date(ctx.request.body.created_at)
@@ -444,6 +456,9 @@ const updateInvoice = async (ctx,token,contactID,invoiceID) => {
   }
 };
 
+/***************************************/
+/*********      PRODUCTOS      *********/
+/***************************************/
 const createProduct = async (ctx,token) => {
   try{
     var productName = ctx.request.body.title;
@@ -655,19 +670,44 @@ const deleteProduct = async (ctx,token) => {
   }
 };
 
-const createCategory = async(ctx,token) => {
+const getProductVariantUnitCost = async (productVariantID) => {
+  try{
+    const variables = await productVariantVariableQuery(productVariantID);
+    var productVariantInfo = await graphQLClient(getProductVariantByIDQuery,variables);
+    const unitCost = parseFloat(productVariantInfo.productVariant.inventoryItem.unitCost.amount);
+    return unitCost;
+  }catch(err){
+    console.log(err);
+  }
+};
+
+/****************************************/
+/*********      CATEGORÍAS      *********/
+/****************************************/
+const createCategory = async (ctx,token) => {
   try{
     var createCollectionStatus = false;
+    const principalCode = '4121';
     var lastIdAI = await getLastCollectionSubId();
-    var actualId = '00';
+    var actualId = '0';
     if(lastIdAI){
       actualId = lastIdAI.ai.toString();
+    }else{
+      var codes = await getCategoriesExistsCodes(token);
+      arrayIds = codes.map((item) => {
+        var num = item.split("4121").pop();
+        return (!isNaN(num)?num:0);
+      });
+      actualId = arrayIds.sort().pop();
+      actualId = parseInt(actualId)+1;
+      actualId = String(actualId).padStart(2, '0');
     }
     const categoryData = {
-      "code": "4121"+actualId,
+      "code": principalCode+actualId,
       "name": ctx.request.body.title,
       "description": ctx.request.body.body_html,
-      "parent_id": 91727
+      "parent_id": 1401
+      //"parent_id": 91727
     };
     const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/category',{
       method:'POST',
@@ -682,12 +722,7 @@ const createCategory = async(ctx,token) => {
       const saveCollectionRelationShip = await insertCollectionRelationship(ctx.request.body.admin_graphql_api_id,response.id);
       if(saveCollectionRelationShip){
         createCollectionStatus = true;
-        const idAI = parseInt(lastIdAI.ai);
-        var newIdAI = idAI++;
-        if(newIdAI < 10){
-          newIdAI = '0'+newIdAI.toString();
-        }
-        await insertLastCollectionSubId(newIdAI);
+        await insertLastCollectionSubId(actualId);
       }
     }
     return createCollectionStatus;
@@ -696,7 +731,7 @@ const createCategory = async(ctx,token) => {
   }
 };
 
-const updateCategory = async(ctx,token) => {
+const updateCategory = async (ctx,token) => {
   try{
     var updateCollectionStatus = false;
     const id = ctx.request.body.admin_graphql_api_id;
@@ -724,7 +759,7 @@ const updateCategory = async(ctx,token) => {
   }
 };
 
-const deleteCategory = async(ctx,token) => {
+const deleteCategory = async (ctx,token) => {
   try{
     var deleteStatus = false;
     const id = ctx.request.body.admin_graphql_api_id;
@@ -740,55 +775,12 @@ const deleteCategory = async(ctx,token) => {
     if(data){
       const deleteResult = await deleteCollectionRelationship(id,null);
       if(deleteResult){
-        deleteStatus = true
+        deleteStatus = true;
       }
     }
     return deleteStatus;
   }catch(err){
       console.log(err);
-  }
-};
-
-const callGetClients = async (token,idate,fdate) => {
-  try{
-    const response = await fetch('https://api.micloudbiz.com/v1/contact?begin_date='+idate+'&end_date='+fdate,{
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'token': token
-      }
-    });
-    const data = await response.json();
-    return data;
-  }catch(err){
-      console.log(err);
-  }
-};
-
-const graphQLClient = async (query,variables) => {
-  try{
-    const graphqlQuery = new GraphQLClient(`https://${process.env.SHOP_NAME}/admin/api/2021-04/graphql.json`,{
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': process.env.ACCESS_TOKEN_SHOPIFY
-      }
-    });
-    const queryData = await graphqlQuery.request(query,variables);
-    return queryData;
-  }catch(err){
-    console.log(err);
-  }
-
-};
-
-const getProductVariantUnitCost = async (productVariantID) => {
-  try{
-    const variables = await productVariantVariableQuery(productVariantID);
-    var productVariantInfo = await graphQLClient(getProductVariantByIDQuery,variables);
-    const unitCost = parseFloat(productVariantInfo.productVariant.inventoryItem.unitCost.amount);
-    return unitCost;
-  }catch(err){
-    console.log(err);
   }
 };
 
@@ -811,7 +803,7 @@ const getProductInfoFromCloudbiz = async (token,productID) => {
 };
 
 const getCustomerInfoFromCloudbiz = async (token,customerID) => {
-  const resp = await fetch('https://api.micloudbiz.com/v1/contact/'+customerId,{
+  const resp = await fetch('https://api.micloudbiz.com/v1/contact/'+customerID,{
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -832,6 +824,22 @@ const getCategoryInfoFromCloudbiz = async (token,categoryID) => {
   });
   const response = await resp.json();
   return response;
+};
+
+const getAllCategoryInfoFromCloudbiz = async (token) => {
+  try{
+    const categories = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/category/code/412000',{
+      method: 'GET',
+      headers: {
+        'Content-Type' : 'application/json',
+        'token': token
+      }
+    });
+    const response = await categories.json();
+    return response;
+  }catch(err){
+    console.log(err);
+  }
 };
 
 const getWarehouseInfoFromCloudbiz = async (token,warehouseID) => {
@@ -906,6 +914,22 @@ const getItemInfoFromCloudbiz = async (token,itemID) => {
   return response;
 };
 
+const callGetClients = async (token,idate,fdate) => {
+  try{
+    const response = await fetch('https://api.micloudbiz.com/v1/contact?begin_date='+idate+'&end_date='+fdate,{
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'token': token
+      }
+    });
+    const data = await response.json();
+    return data;
+  }catch(err){
+      console.log(err);
+  }
+};
+
 module.exports = {
     getPDF,
     getToken,
@@ -918,7 +942,6 @@ module.exports = {
     deleteCustomer,
     getInvoiceWithId,
     getCustomerIdWithEmail,
-    createCustomerWithParams,
     callGetClients,
     graphQLClient,
     getProductVariantUnitCost,

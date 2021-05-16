@@ -17,6 +17,7 @@ const {
   createCustomerWithParams,
   callGetClients,
   createCategory,
+  deleteCategory,
   deleteProduct
 } = require('./apiClient');
 const {
@@ -32,6 +33,7 @@ const {
 //EndPoints Terminados Inicio
 customRouter.get('/api/v1/invoice/getInvoice',
   async (ctx) => {
+    ctx.response.statusCode = 200;
     var id_invoice = 425356;
     const emailSubject = 'Su factura ha sido generado';
     const emailBody = '<p>Muchas Gracias por su compra</p>';
@@ -43,18 +45,11 @@ customRouter.get('/api/v1/invoice/getInvoice',
       let emailSendStatus = await sendEmail(emailSubject,emailBody,emailSend,invoicePDF);
       if(emailSendStatus){
         console.log('Factura recibida correctamente');
-        ctx.status = 200;
-        ctx.body = invoice;
       }else{
         console.log('Error al intentar enviar factura por correo');
-        ctx.status = 500;
-        ctx.body = 'Error al intentar enviar factura por correo';
       }
-
     }else{
       console.log('Error al obtener la factura');
-      ctx.status = 404;
-      ctx.body = 'Error al obtener la factura';
     }
   }
 );
@@ -123,8 +118,6 @@ customRouter.post('/api/v1/invoice/createInvoice',
     var creationDateFormat = cDate.getFullYear()+'-'+(cDate.getMonth()+1)+'-'+cDate.getDate()+' '+cDate.getHours()+':'+cDate.getMinutes()+':'+cDate.getSeconds()+' CST';
     var dueDateFormat = dDate.getFullYear()+'-'+(dDate.getMonth()+1)+'-'+dDate.getDate()+' '+dDate.getHours()+':'+dDate.getMinutes()+':'+dDate.getSeconds()+' CST';
     var items = [];
-    var code = [44203,31048];
-    var itemName = ["Tinta Negra","Planchado express"];
     ctx.request.body.line_items.forEach(async(item, i) => {
       let admin_graphql_api_id = "gid://shopify/ProductVariant/"+item.variant_id;
       const productInfo = await getProductFirestore(null,admin_graphql_api_id,null);
@@ -327,7 +320,7 @@ customRouter.post('/api/v1/customer/deleteCustomerGroup',
   }
 );
 
-//EndPoints Pendientes de Desarrollo Inicio
+//EndPoints Pendientes de Desarrollo Fin
 
 
 module.exports = {
