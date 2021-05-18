@@ -12,12 +12,12 @@ const Router = require('koa-router');
 const { updateClientOnShopify } = require('./server/apiCalls.js');
 //const { setQueryMutationAuth } = require('./server/apiClient.js');
 dotenv.config();
-const { default: graphQLProxy  } = require('@shopify/koa-shopify-graphql-proxy');
+const { SHOPIFY_API_SECRET_KEY, SHOPIFY_API_KEY } = process.env;
 //process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
 
 Shopify.Context.initialize({
-  API_KEY: process.env.SHOPIFY_API_KEY,
-  API_SECRET_KEY: process.env.SHOPIFY_API_SECRET_KEY,
+  API_KEY: SHOPIFY_API_KEY,
+  API_SECRET_KEY: SHOPIFY_API_SECRET_KEY,
   SCOPES: process.env.SHOPIFY_API_SCOPES.split(","),
   HOST_NAME: process.env.SHOPIFY_APP_URL.replace(/https:\/\//, ""),
   API_VERSION: ApiVersion.October20,
@@ -26,7 +26,6 @@ Shopify.Context.initialize({
 });
 
 const port = parseInt(process.env.PORT, 10) || 3000;
-const { SHOPIFY_API_SECRET_KEY, SHOPIFY_API_KEY } = process.env;
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();

@@ -17,6 +17,7 @@ const {
   createCustomerWithParams,
   callGetClients,
   createCategory,
+  updateCategory,
   deleteCategory,
   deleteProduct
 } = require('./apiClient');
@@ -85,17 +86,12 @@ customRouter.post('/api/v1/customer/updateCustomer',
 customRouter.post('/api/v1/customer/deleteCustomer',
   async (ctx) => {
     ctx.res.statusCode = 200;
-    shopifyCustomerID = ctx.request.body.admin_graphql_api_id;
-    const customerReference = await getCustomerFirestore(shopifyCustomerID,null);
-    if(customerReference){
-      const token = await getToken();
-      const customer = await deleteCustomer(token,customerReference.cloudbizReference.toString());
-      if(customer){
-        await deleteCustomerRelationship(shopifyCustomerID,null);
-        console.log('Contacto Eliminado Correctamente');
-      }else{
-        console.log('Error al eliminar contacto');
-      }
+    const token = await getToken();
+    const customer = await deleteCustomer(ctx,token);
+    if(customer){
+      console.log('Contacto Eliminado Correctamente');
+    }else{
+      console.log('Error al eliminar contacto');
     }
   }
 );
@@ -229,21 +225,6 @@ customRouter.post('/api/v1/inventory/deleteProduct',
     }
   }
 );
-//EndPoints Terminados Final
-
-//EndPoints Pendientes de Desarrollo Inicio
-customRouter.post('/api/v1/invoice/updateInvoice',
-  async (ctx) => {
-    const token = getToken();
-
-  }
-);
-
-customRouter.post('/api/v1/invoice/deleteInvoice',
-  async (ctx) => {
-
-  }
-);
 
 customRouter.post('/api/v1/category/createCategory',
   async (ctx) => {
@@ -281,6 +262,21 @@ customRouter.post('/api/v1/category/deleteCategory',
     }else{
       console.log('Error al eliminar categoría o colección');
     }
+  }
+);
+//EndPoints Terminados Final
+
+//EndPoints Pendientes de Desarrollo Inicio
+customRouter.post('/api/v1/invoice/updateInvoice',
+  async (ctx) => {
+    const token = getToken();
+
+  }
+);
+
+customRouter.post('/api/v1/invoice/deleteInvoice',
+  async (ctx) => {
+
   }
 );
 

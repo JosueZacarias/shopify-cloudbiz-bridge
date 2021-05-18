@@ -10,7 +10,7 @@ const {
 } = require('./variables.js');
 const {
   getToken,
-  callGetClients,
+  getAllCloudbizCustomers,
   graphQLClient
 } = require('./apiClient.js');
 
@@ -26,7 +26,8 @@ const {
   deleteCustomerRelationship,
   deleteProductRelationship,
   deleteCustomerVIPTypeRelationship,
-  deleteCollectionRelationship
+  deleteCollectionRelationship,
+  getAllShopifyCustomers
 } = require('./firestoreQuery.js');
 
 const {
@@ -43,6 +44,17 @@ const {
 const {
   getProductVariantByIDQuery
 } = require('./query.js');
+
+const verifyChangesOnCloudbiz = async () => {
+  try{
+    const token = await getToken();
+    const dates = getDateIntervalForConsults();
+    const cloudbizClients = await getAllCloudbizCustomers(token,dates.idate,dates.fdate);
+    const shopifyClients = await getAllShopifyCustomers();
+  }catch(erro){
+    console.log(erro);
+  }
+};
 
 const updateCustomerOnShopify = async () => {
   try{
@@ -121,7 +133,14 @@ const getDateIntervalForConsults = () => {
   };
 };
 
+/*******************************************************/
+/*********      UPDATE DATA FROM CLOUDBIZ      *********/
+/*******************************************************/
+
+const updateDataFromCloudbizToShopify = async () => {
+  await updateCustomerOnShopify();
+};
 
 module.exports = {
-  updateCustomerOnShopify
+  updateDataFromCloudbizToShopify
 };

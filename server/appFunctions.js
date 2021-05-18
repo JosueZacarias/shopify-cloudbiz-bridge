@@ -1,8 +1,4 @@
-const {
-  getCustomerVIPType,
-  insertCustomerVIPType,
-  deleteCustomerVIPType
-} = require('./firestoreQuery.js');
+import { getCustomerVIPType, insertCustomerVIPType, deleteCustomerVIPType } from './firestoreQuery.js';
 
 const verifyCustomerVIPType = async (tag) => {
   try{
@@ -36,7 +32,7 @@ const createCustomerVIPType = async (tag) => {
   }
 };
 
-module.exports = {
+export default {
   verifyCustomerVIPType,
   createCustomerVIPType
 };

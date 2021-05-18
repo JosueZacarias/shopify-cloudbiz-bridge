@@ -158,6 +158,7 @@ const createCustomer = async (ctx,token) => {
   var city = '';
   var address = '';
   var phone_1 = '';
+  var createCustomerStatus = false;
   try{
     if(ctx.request.body.addresses.length > 0){
       city = ctx.request.body.addresses[0]['city'];
@@ -195,8 +196,9 @@ const createCustomer = async (ctx,token) => {
     const response = await resp.json();
     if(response){
       await insertCustomerRelationship(ctx.request.body.admin_graphql_api_id,response.id);
+      createCustomerStatus = true;
     }
-    return response;
+    return createCustomerStatus;
   }
   catch(err){
     console.log(err);
@@ -255,8 +257,12 @@ const updateCustomer = async (ctx,token) => {
   }
 };
 //Eliminar cliente en cloudBiz
-const deleteCustomer = async (token,contactID) => {
+const deleteCustomer = async (ctx,token) => {
   try{
+    var deletedCustomerStatus = false;
+    const shopifyCustomerID = ctx.request.body.admin_graphql_api_id;
+    const customerReference = await getCustomerFirestore(shopifyCustomerID,null);
+    const contactID = customerReference.cloudbizReference;
     const response = await fetch('https://api.micloudbiz.com/v1/contact/'+contactID,{
       method: 'DELETE',
       headers: {
@@ -265,7 +271,11 @@ const deleteCustomer = async (token,contactID) => {
       }
     });
     const data = await response.json();
-    return data;
+    if(data){
+      await deleteCustomerRelationship(shopifyCustomerID,null);
+      deletedCustomerStatus = true;
+    }
+    return deletedCustomerStatus;
   }catch(err){
       console.log(err);
   }
@@ -390,12 +400,10 @@ const updateInvoice = async (ctx,token,contactID,invoiceID) => {
     var creationDateFormat = cDate.getFullYear()+'-'+(cDate.getMonth()+1)+'-'+cDate.getDate()+' '+cDate.getHours()+':'+cDate.getMinutes()+':'+cDate.getSeconds()+' CST';
     var dueDateFormat = dDate.getFullYear()+'-'+(dDate.getMonth()+1)+'-'+dDate.getDate()+' '+dDate.getHours()+':'+dDate.getMinutes()+':'+dDate.getSeconds()+' CST';
     var items = [];
-    var code = [44203,31048];
-    var itemName = ["Tinta Negra","Planchado express"];
     ctx.request.body.line_items.forEach((item, i) => {
       items.push({
-        "item_id": code[i],
-        "name": itemName[i],
+        "item_id": item.variant_id,
+        "name": item.name,
         "quantity": item.quantity.toString(),
         "price": item.price.toString(),
         "discount_id": 0,
@@ -433,14 +441,6 @@ const updateInvoice = async (ctx,token,contactID,invoiceID) => {
       "document_type": null,
       "document_id": null
     };
-    const resp = await axios.post('https://apinode.micloudbiz.com/gateway-api/v1/invoice'+invoiceID,invoiceData,{
-        headers: {
-          'Content-Type': 'application/json',
-          'token': token
-        }
-      }
-    );
-    return resp.data;
     const response = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/invoice/'+invoiceID,{
       method: 'PUT',
       headers: {
@@ -699,9 +699,9 @@ const createCategory = async (ctx,token) => {
         return (!isNaN(num)?num:0);
       });
       actualId = arrayIds.sort().pop();
-      actualId = parseInt(actualId)+1;
-      actualId = String(actualId).padStart(2, '0');
     }
+    actualId = parseInt(actualId)+1;
+    actualId = String(actualId).padStart(2, '0');
     const categoryData = {
       "code": principalCode+actualId,
       "name": ctx.request.body.title,
@@ -734,6 +734,7 @@ const createCategory = async (ctx,token) => {
 const updateCategory = async (ctx,token) => {
   try{
     var updateCollectionStatus = false;
+    await getLastCollectionSubId();
     const id = ctx.request.body.admin_graphql_api_id;
     const categoryId = await getCollectionRelationship(id,null);
     const categoryData = {
@@ -762,7 +763,7 @@ const updateCategory = async (ctx,token) => {
 const deleteCategory = async (ctx,token) => {
   try{
     var deleteStatus = false;
-    const id = ctx.request.body.admin_graphql_api_id;
+    const id = "gid://shopify/Collection/"+ctx.request.body.id;
     const categoryID = await getCollectionRelationship(id,null);
     const response = await fetch('https://api.micloudbiz.com/v1/category/'+categoryID.cloudbizReference,{
       method: 'DELETE',
@@ -773,10 +774,8 @@ const deleteCategory = async (ctx,token) => {
     });
     const data = await response.json();
     if(data){
-      const deleteResult = await deleteCollectionRelationship(id,null);
-      if(deleteResult){
-        deleteStatus = true;
-      }
+      await deleteCollectionRelationship(id,null);
+      deleteStatus = true;
     }
     return deleteStatus;
   }catch(err){
@@ -914,7 +913,7 @@ const getItemInfoFromCloudbiz = async (token,itemID) => {
   return response;
 };
 
-const callGetClients = async (token,idate,fdate) => {
+const getAllCloudbizCustomers = async (token,idate,fdate) => {
   try{
     const response = await fetch('https://api.micloudbiz.com/v1/contact?begin_date='+idate+'&end_date='+fdate,{
       method: 'GET',
@@ -936,13 +935,14 @@ module.exports = {
     sendEmail,
     createCustomer,
     createInvoice,
+    updateInvoice,
     createProduct,
     updateCustomer,
     updateProduct,
     deleteCustomer,
     getInvoiceWithId,
     getCustomerIdWithEmail,
-    callGetClients,
+    getAllCloudbizCustomers,
     graphQLClient,
     getProductVariantUnitCost,
     createCategory,
