@@ -6,7 +6,8 @@ const {
   productVariantVariableMutationCreateUpdate,
   productVariantVariableMutationDelete,
   collectionVariableMutationCreate,
-  collectionVariableMutationDelete
+  collectionVariableMutationDelete,
+  customersAll
 } = require('./variables.js');
 const {
   getToken,
@@ -27,7 +28,7 @@ const {
   deleteProductRelationship,
   deleteCustomerVIPTypeRelationship,
   deleteCollectionRelationship,
-  getAllShopifyCustomers
+  getAllFirestoreCustomers
 } = require('./firestoreQuery.js');
 
 const {
@@ -42,17 +43,51 @@ const {
 } = require('./mutations.js');
 
 const {
-  getProductVariantByIDQuery
+  getProductVariantByIDQuery,
+  getAllShopifyCustomers
 } = require('./query.js');
 
 const verifyChangesOnCloudbiz = async () => {
   try{
     const token = await getToken();
     const dates = getDateIntervalForConsults();
-    const cloudbizClients = await getAllCloudbizCustomers(token,dates.idate,dates.fdate);
-    const shopifyClients = await getAllShopifyCustomers();
-  }catch(erro){
-    console.log(erro);
+    var cant = 10;
+    var cursor = null;
+    var cloudbizClients = await getAllCloudbizCustomers(token,dates.idate,dates.fdate);
+    var cloudbizCountClients = cloudbizClients.length;
+    var shopifyClients = await getShopifyCustomersArray(cant,cursor);
+    var shopifyCountClients = shopifyClients.length;
+
+    if(cloudbizCountClients > shopifyCountClients){
+
+    }else if(cloudbizCountClients < shopifyCountClients){
+
+    }
+    return token;
+  }catch(err){
+    console.log(err);
+  }
+};
+
+const getShopifyCustomersArray = async (cant,cursor,variable = null) => {
+  try{
+    if(variable == null){
+      variable = await customersAll(cant,cursor);
+    }
+    var shopifyClientsQuery = await graphQLClient(getAllShopifyCustomers,variable);
+    var haveMore = shopifyClientsQuery.customers.pageInfo.hasNextPage;
+    var shopifyClients = [...shopifyClientsQuery.customers.edges];
+    if(haveMore){
+      cant += 10;
+      cursor = shopifyClients.pop().cursor;
+      variable = await customersAll(cant,cursor);
+      var clients = await getShopifyCustomersArray(cant,cursor,variable);
+      shopifyClients.push(clients);
+    }
+
+    return shopifyClients;
+  }catch(err){
+    console.log(err);
   }
 };
 
@@ -138,9 +173,9 @@ const getDateIntervalForConsults = () => {
 /*******************************************************/
 
 const updateDataFromCloudbizToShopify = async () => {
-  await updateCustomerOnShopify();
+  //await updateCustomerOnShopify();
 };
 
 module.exports = {
-  updateDataFromCloudbizToShopify
+  verifyChangesOnCloudbiz
 };

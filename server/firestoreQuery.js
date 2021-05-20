@@ -20,7 +20,7 @@ const getLastCollectionSubId = async () => {
   return data;
 };
 
-const getAllShopifyCustomers = async () => {
+const getAllFirestoreCustomers = async () => {
   try{
     var customerList = [];
     const customers = await database.collection('customer').get();
@@ -274,6 +274,6 @@ module.exports = {
   deleteCustomerVIPTypeRelationship,
   deleteCollectionRelationship,
 
-  getAllShopifyCustomers,
+  getAllFirestoreCustomers,
   getDataFromFireStore
 };

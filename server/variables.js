@@ -42,6 +42,20 @@ const collectionWithProductVariableQuery = async(collectionId,productCount) => {
   }
 };
 
+const customersAll = async (cant,cursor) => {
+  var variables;
+  if(cursor == null){
+    variables = {
+      "cant":cant
+    };
+  }else if(cursor !== null){
+    variables = {
+      "cant":cant,
+      "cursor":cursor
+    };
+  }
+  return variables;
+};
 
 //SECCIÓN DE VARIABLES DE ESCRITURA O MUTACIONES
 const customerVariableMutationCreate = async (email,firstName,lastName,phone1,phone2,address1,city,id = null) => {
@@ -225,5 +239,7 @@ module.exports = {
   productVariantVariableMutationCreateUpdate,
   productVariantVariableMutationDelete,
   collectionVariableMutationCreate,
-  collectionVariableMutationDelete
+  collectionVariableMutationDelete,
+
+  customersAll
 }
