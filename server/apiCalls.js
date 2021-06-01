@@ -10,11 +10,12 @@ const {
   customersAll
 } = require('./variables.js');
 const {
-  getToken,
   getAllCloudbizCustomers,
-  graphQLClient
 } = require('./apiClient.js');
-
+const {
+  getToken,
+  graphQLClient
+} = require('./appFunctions.js');
 const {
   insertCustomerRelationship,
   insertProductRelationship,
@@ -50,18 +51,23 @@ const {
 const verifyChangesOnCloudbiz = async () => {
   try{
     const token = await getToken();
-    const dates = getDateIntervalForConsults();
     var cant = 10;
     var cursor = null;
-    var cloudbizClients = await getAllCloudbizCustomers(token,dates.idate,dates.fdate);
+    var dates = getDateIntervalForConsults();
+    var firestoreCustomersCreated = await getAllFirestoreCustomers();
+    var cloudbizClients = await getCloudbizCustomersArray(token);
     var cloudbizCountClients = cloudbizClients.length;
     var shopifyClients = await getShopifyCustomersArray(cant,cursor);
     var shopifyCountClients = shopifyClients.length;
-
-    if(cloudbizCountClients > shopifyCountClients){
-
+    var firestoreCountClients = firestoreCustomersCreated.length;
+    if(cloudbizCountClients > 0){
+      cloudbizClients.forEach(item => {
+        if(Date.parse(item.created_at) >= Date.parse(dates.idate) && Date.parse(item.created_at) <= Date.parse(dates.fdate)){
+          console.log(item);
+        }
+      });
     }else if(cloudbizCountClients < shopifyCountClients){
-
+      console.log("Shopify: " +shopifyCountClients);
     }
     return token;
   }catch(err){
@@ -86,6 +92,38 @@ const getShopifyCustomersArray = async (cant,cursor,variable = null) => {
     }
 
     return shopifyClients;
+  }catch(err){
+    console.log(err);
+  }
+};
+
+const getCloudbizCustomersArray = async (token,cant = 1) => {
+  try{
+    var cloudbizCustomers = [];
+    const noNeedFields = [
+      'seller_id',
+      'discount',
+      'is_vendor',
+      'balance_in_favor',
+      'seller',
+      'persons',
+      'points',
+      'delete_at'
+    ];
+    var getCustomers = await getAllCloudbizCustomers(token,cant);
+    var customerCount = getCustomers.pop().rows;
+    if(customerCount > cant){
+      getCustomers = await getAllCloudbizCustomers(token,4);
+      getCustomers.pop();
+      cloudbizCustomers = [...getCustomers];
+      cloudbizCustomers = cloudbizCustomers.map((item) => {
+        noNeedFields.forEach((key) => {
+          delete item[key];
+        });
+        return item;
+      });
+    }
+    return cloudbizCustomers;
   }catch(err){
     console.log(err);
   }
@@ -130,6 +168,7 @@ const updateCategoryOnShopify = async() => {};
 
 const updateCustomerGroupOnShopify = async() => {};
 
+//Retorna nombre seccionado en nombres y apellidos a partir de un nombre completo
 const getNameStructure = (names) => {
   var fullName = names.trim().split(" ");
 
@@ -156,17 +195,24 @@ const getNameStructure = (names) => {
 };
 
 const getDateIntervalForConsults = () => {
-  const today = new Date();
+  const today = new Date('2021-05-14 09:37:01');
   const yesterday = new Date(today);
   //Definir el tiempo para consultar a CloudBiz
-  yesterday.setMinutes(yesterday.getMinutes() - 15);
-  var finalDate = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate()+' '+today.getHours()+':'+today.getMinutes()+':'+today.getSeconds();
-  var initialDate = yesterday.getFullYear()+'-'+(yesterday.getMonth()+1)+'-'+yesterday.getDate()+' '+yesterday.getHours()+':'+yesterday.getMinutes()+':'+yesterday.getSeconds();
+  yesterday.setDate(yesterday.getDate() - 1);
+  var finalDate = today.getFullYear()+'-'+pad((today.getMonth()+1))+'-'+pad(today.getDate())+' '+pad(today.getHours())+':'+pad(today.getMinutes())+':'+pad(today.getSeconds());
+  var initialDate = yesterday.getFullYear()+'-'+pad((yesterday.getMonth()+1))+'-'+pad(yesterday.getDate())+' '+pad(yesterday.getHours())+':'+pad(yesterday.getMinutes())+':'+pad(yesterday.getSeconds());
   return {
     "idate": initialDate,
     "fdate": finalDate
   };
 };
+
+function pad(number) {
+  if (number < 10) {
+    return '0' + number;
+  }
+  return number;
+}
 
 /*******************************************************/
 /*********      UPDATE DATA FROM CLOUDBIZ      *********/

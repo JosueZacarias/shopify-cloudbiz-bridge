@@ -26,7 +26,7 @@ const getAllFirestoreCustomers = async () => {
     const customers = await database.collection('customer').get();
     
     customers.forEach(customer => {
-      customerList[customer.id] = customer.data();
+      customerList.push({"document_id":customer.id, "data":customer.data()});
     });
 
     return customerList;

@@ -1,10 +1,6 @@
-const HTMLToPDF = require('convert-html-to-pdf').default;
-const nodemailer = require("nodemailer");
-const dotenv = require("dotenv");
 const axios = require('axios');
 const fetch = require('node-fetch');
 const { Headers } = require('cross-fetch');
-const { GraphQLClient } = require('graphql-request');
 const {
   getProductRelationship,
   getCustomerRelationship,
@@ -28,109 +24,6 @@ const {
 } = require('./variables.js')
 
 global.Headers = global.Headers || Headers;
-
-
-/*******************************************************/
-/*********      FUNCIONES COMPLEMENTARIAS      *********/
-/*******************************************************/
-//Token para peticiones a CloudBiz
-const getToken = async () => {
-    try {
-      dotenv.config();
-        const resp = await axios.post('https://api.micloudbiz.com/v1/auth/login',{
-            "email": process.env.CLOUDBIZ_USER,"password":process.env.CLOUDBIZ_PASSWORD
-          },{
-            headers: {
-              'Content-Type': 'application/json',
-              'token': process.env.CLOUDBIZ_TOKEN
-            }
-          }
-        );
-        return resp.data.token;
-    } catch (err) {
-        console.error(err);
-    }
-};
-//convertir contenido HTML a PDF
-const getPDF = async (htmlContent) => {
-  const htmlToPDF = new HTMLToPDF(htmlContent);
-  try {
-    const pdf = await htmlToPDF.convert();
-    return pdf;
-  } catch (err) {
-    console.log('Error al convertir a PDF');
-  }
-};
-//Cambiar el remitente ya para producción
-const sendEmail = async (subject,mailBody,toAddresses,pdf) => {
-  let transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: {
-        type: 'OAuth2',
-        user: process.env.MAIL_USERNAME,
-        clientId: process.env.OAUTH_CLIENT_ID,
-        clientSecret: process.env.OAUTH_CLIENT_SECRET,
-        refreshToken: process.env.OAUTH_REFRESH_TOKEN,
-        accessToken: process.env.ACCESS_TOKEN,
-        expires: 1484314697598
-      }
-    });
-  let attachments = { filename: "factura.pdf", content: pdf }
-  const mailOptions = {
-    from: "INVERSIONES ZACARÍAS <josuej.zacariasg@gmail.com>",
-    to: toAddresses,
-    subject: subject,
-    html:mailBody,
-    attachments
-  };
-
-  let mail = await transporter.sendMail(mailOptions);
-  return mail.messageId;
-};
-//Obtener factura con ID de cloudBiz
-const getInvoiceWithId = async (token,invoiceId) => {
-  try{
-    const resp = await axios.get('https://apinode.micloudbiz.com/gateway-api/v1/print/document/invoice/'+invoiceId,{
-      headers: {
-        'token': token
-      }
-    });
-    return resp.data;
-  }catch(err){
-    console.log(err);
-  }
-};
-//Consultas informativas a SHOPIFY
-const graphQLClient = async (query,variables) => {
-  try{
-    const graphqlQuery = new GraphQLClient(`https://${process.env.SHOP_NAME}/admin/api/2021-04/graphql.json`,{
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': process.env.ACCESS_TOKEN_SHOPIFY
-      }
-    });
-    const queryData = await graphqlQuery.request(query,variables);
-    return queryData;
-  }catch(err){
-    console.log(err);
-  }
-
-};
-
-const getCategoriesExistsCodes = async (token) => {
-  try{
-    const allCategories = await getAllCategoryInfoFromCloudbiz(token);
-    let codes = [];
-    allCategories.subcategories.forEach((item,i) => {
-      codes.push(item.code);
-    });
-    return codes;
-  }catch(err){
-    console.log(err);
-  }
-};
 
 /**************************************/
 /*********      CLIENTES      *********/
@@ -913,9 +806,23 @@ const getItemInfoFromCloudbiz = async (token,itemID) => {
   return response;
 };
 
-const getAllCloudbizCustomers = async (token,idate,fdate) => {
+//función para uso interno y obtener códigos de las categorías en cloudbiz
+const getCategoriesExistsCodes = async (token) => {
   try{
-    const response = await fetch('https://api.micloudbiz.com/v1/contact?begin_date='+idate+'&end_date='+fdate,{
+    const allCategories = await getAllCategoryInfoFromCloudbiz(token);
+    let codes = [];
+    allCategories.subcategories.forEach((item,i) => {
+      codes.push(item.code);
+    });
+    return codes;
+  }catch(err){
+    console.log(err);
+  }
+};
+
+const getAllCloudbizCustomers = async (token,countRow) => {
+  try{
+    const response = await fetch('https://api.micloudbiz.com/v1/contact?page=1&number_result='+countRow+'&requestRowNumber=true',{
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -930,9 +837,6 @@ const getAllCloudbizCustomers = async (token,idate,fdate) => {
 };
 
 module.exports = {
-    getPDF,
-    getToken,
-    sendEmail,
     createCustomer,
     createInvoice,
     updateInvoice,
@@ -940,10 +844,8 @@ module.exports = {
     updateCustomer,
     updateProduct,
     deleteCustomer,
-    getInvoiceWithId,
     getCustomerIdWithEmail,
     getAllCloudbizCustomers,
-    graphQLClient,
     getProductVariantUnitCost,
     createCategory,
     updateCategory,
