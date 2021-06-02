@@ -14,7 +14,8 @@ const {
 } = require('./apiClient.js');
 const {
   getToken,
-  graphQLClient
+  graphQLClient,
+  pad
 } = require('./appFunctions.js');
 const {
   insertCustomerRelationship,
@@ -33,7 +34,8 @@ const {
 } = require('./firestoreQuery.js');
 
 const {
-  customerCreateUpdate,
+  customerCreate,
+  customerUpdate,
   customerDelete,
   productCreateUpdate,
   productDelete,
@@ -54,22 +56,35 @@ const verifyChangesOnCloudbiz = async () => {
     var cant = 10;
     var cursor = null;
     var dates = getDateIntervalForConsults();
+    //Datos ya almacenados en firestore
     var firestoreCustomersCreated = await getAllFirestoreCustomers();
+    var firestoreCountClients = firestoreCustomersCreated.length;
+    //Datos de cloudbiz
     var cloudbizClients = await getCloudbizCustomersArray(token);
     var cloudbizCountClients = cloudbizClients.length;
+    //Datos de shopify
     var shopifyClients = await getShopifyCustomersArray(cant,cursor);
     var shopifyCountClients = shopifyClients.length;
-    var firestoreCountClients = firestoreCustomersCreated.length;
-    if(cloudbizCountClients > 0){
-      cloudbizClients.forEach(item => {
-        if(Date.parse(item.created_at) >= Date.parse(dates.idate) && Date.parse(item.created_at) <= Date.parse(dates.fdate)){
-          console.log(item);
+    var variables = undefined;
+    var names = {};
+    cloudbizClients.forEach(async item => {
+      names = getNameStructure(item.full_name);
+      if(cloudbizCountClients > 0 && (cloudbizCountClients > firestoreCountClients && cloudbizCountClients > shopifyCountClients)){
+        if(Date.parse(item.created_at) >= Date.parse(dates.idate) && Date.parse(item.created_at) <= Date.parse(dates.fdate) && item.email != null){
+          variables = await customerVariableMutationCreate(item.email,names.firstName,names.lastName,item.mobile_phone,item.phone1,item.address,item.city);
+          var queryResult = await graphQLClient(customerCreate,variables);
+          await insertCustomerRelationship(queryResult.customerCreate.customer.id,item.id);
         }
-      });
-    }else if(cloudbizCountClients < shopifyCountClients){
-      console.log("Shopify: " +shopifyCountClients);
-    }
-    return token;
+      }else if(cloudbizCountClients > 0 && (cloudbizCountClients == firestoreCountClients && cloudbizCountClients == shopifyCountClients)){
+        if(Date.parse(item.updated_at) >= Date.parse(dates.idate) && Date.parse(item.updated_at) <= Date.parse(dates.fdate) && item.email != null){
+          var clientCreated = await getCustomerRelationship(null,item.id);
+          variables = await customerVariableMutationCreate(item.email,names.firstName,names.lastName,item.mobile_phone,item.phone1,item.address,item.city,clientCreated.shopifyReference);
+          var queryResult = await graphQLClient(customerUpdate,variables);
+        }
+      }
+      
+    });
+    return true;
   }catch(err){
     console.log(err);
   }
@@ -119,6 +134,12 @@ const getCloudbizCustomersArray = async (token,cant = 1) => {
       cloudbizCustomers = cloudbizCustomers.map((item) => {
         noNeedFields.forEach((key) => {
           delete item[key];
+        });
+        var keys = Object.keys(item);
+        keys.forEach(key => {
+          if(item[key] == null){
+            item[key] = "";
+          }
         });
         return item;
       });
@@ -195,7 +216,7 @@ const getNameStructure = (names) => {
 };
 
 const getDateIntervalForConsults = () => {
-  const today = new Date('2021-05-14 09:37:01');
+  const today = new Date();
   const yesterday = new Date(today);
   //Definir el tiempo para consultar a CloudBiz
   yesterday.setDate(yesterday.getDate() - 1);
@@ -206,13 +227,6 @@ const getDateIntervalForConsults = () => {
     "fdate": finalDate
   };
 };
-
-function pad(number) {
-  if (number < 10) {
-    return '0' + number;
-  }
-  return number;
-}
 
 /*******************************************************/
 /*********      UPDATE DATA FROM CLOUDBIZ      *********/

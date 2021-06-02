@@ -1,7 +1,19 @@
 const { gql } = require('graphql-request');
 
-const customerCreateUpdate = gql`mutation ($input: CustomerInput!) {
+const customerCreate = gql`mutation ($input: CustomerInput!) {
   customerCreate(input: $input) {
+    customer {
+      id
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}`;
+
+const customerUpdate = gql`mutation ($input: CustomerInput!) {
+  customerUpdate(input: $input) {
     customer {
       id
     }
@@ -107,7 +119,8 @@ const collectionDelete = gql`mutation ($input: CollectionDeleteInput!) {
 }`;
 
 module.exports = {
-  customerCreateUpdate,
+  customerCreate,
+  customerUpdate,
   customerDelete,
   productCreateUpdate,
   productDelete,

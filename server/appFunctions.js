@@ -40,6 +40,12 @@ const createCustomerVIPType = async (tag) => {
 /*******************************************************/
 /*********      FUNCIONES COMPLEMENTARIAS      *********/
 /*******************************************************/
+const pad = (number) => {
+  if (number < 10) {
+    return '0' + number;
+  }
+  return number;
+}
 //Token para peticiones a CloudBiz
 const getToken = async () => {
   try {
@@ -121,7 +127,7 @@ const graphQLClient = async (query,variables) => {
     const queryData = await graphqlQuery.request(query,variables);
     return queryData;
   }catch(err){
-    console.log(err);
+    console.log("ocurrió un error: "+err);
   }
 };
 
@@ -133,4 +139,5 @@ module.exports = {
   graphQLClient,
   verifyCustomerVIPType,
   createCustomerVIPType,
+  pad
 };
