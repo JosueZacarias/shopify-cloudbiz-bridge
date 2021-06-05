@@ -57,6 +57,21 @@ const customersAll = async (cant,cursor) => {
   return variables;
 };
 
+const productsAll = async(cant,cursor) => {
+  var variables;
+  if(cursor == null){
+    variables = {
+      "cant":cant
+    };
+  }else if(cursor !== null){
+    variables = {
+      "cant":cant,
+      "cursor":cursor
+    };
+  }
+  return variables;
+};
+
 //SECCIÓN DE VARIABLES DE ESCRITURA O MUTACIONES
 const customerVariableMutationCreate = async (email,firstName,lastName,phone1,phone2,address1,city,id = null) => {
   let input = {};
@@ -138,6 +153,17 @@ const productVariableMutationCreateUpdate = async(descriptionHtml,published,stat
     };
   }
   return input;
+};
+
+const productImageVariableMutationCreate = async (altImage,externalSource,mediaContentType = "IMAGE") => {
+  let createMediaInput = {
+    "createMediaInput": {
+      "alt": altImage,
+      "mediaContentType": mediaContentType,
+      "originalSource": externalSource
+    }
+  };
+  return createMediaInput;
 };
 
 const productVariableMutationDelete = async(id) => {
@@ -235,11 +261,13 @@ module.exports = {
   customerVariableMutationCreate,
   customerVariableMutationDelete,
   productVariableMutationCreateUpdate,
+  productImageVariableMutationCreate,
   productVariableMutationDelete,
   productVariantVariableMutationCreateUpdate,
   productVariantVariableMutationDelete,
   collectionVariableMutationCreate,
   collectionVariableMutationDelete,
 
-  customersAll
+  customersAll,
+  productsAll
 }

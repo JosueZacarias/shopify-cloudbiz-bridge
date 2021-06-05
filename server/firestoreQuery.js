@@ -20,23 +20,17 @@ const getLastCollectionSubId = async () => {
   return data;
 };
 
-const getAllFirestoreCustomers = async () => {
-  try{
-    var customerList = [];
-    const customers = await database.collection('customer').get();
-    
-    customers.forEach(customer => {
-      customerList.push({"document_id":customer.id, "data":customer.data()});
-    });
-
-    return customerList;
-  }catch(err){
-    console.log(err);
-  }
-
+const getCollectionDataFromFireStore = async (collection) => {
+  const response = await database.collection(collection).get();
+  var collectionList = []
+  response.forEach(collectionData => {
+    collectionList.push({"document_id":collectionData.id, "data":collectionData.data()});
+  });
+  
+  return collectionList;
 };
 
-const getDataFromFireStore = async (collection,doc) => {
+const getDocumentDataFromFireStore = async (collection,doc) => {
   const response = await database.collection(collection).doc(doc).get();
   if(!response.exists){
     console.log(`Dato no encontrado para la colección: ${collection} y para el documento: ${doc}`);
@@ -153,6 +147,20 @@ const deleteCustomerVIPTypeRelationship = async (shopifyCustomerVIPID,cloudbizCu
   });
 };
 
+const getAllFirestoreCustomers = async () => {
+  try{
+    var customerList = [];
+    const customers = await database.collection('customer').get();
+    
+    customers.forEach(customer => {
+      customerList.push({"document_id":customer.id, "data":customer.data()});
+    });
+
+    return customerList;
+  }catch(err){
+    console.log(err);
+  }
+};
 
 /***************************************/
 /*********      PRODUCTOS      *********/
@@ -275,5 +283,6 @@ module.exports = {
   deleteCollectionRelationship,
 
   getAllFirestoreCustomers,
-  getDataFromFireStore
+  getDocumentDataFromFireStore,
+  getCollectionDataFromFireStore,
 };

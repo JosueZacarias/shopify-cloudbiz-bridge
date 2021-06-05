@@ -836,6 +836,22 @@ const getAllCloudbizCustomers = async (token,countRow) => {
   }
 };
 
+const getAllCloudbizProducts = async (token,countRow) => {
+  try{
+    const response = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/item?page=1&number_result='+countRow+'&requestRowNumber=true',{
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'token': token
+      }
+    });
+    const data = await response.json();
+    return data;
+  }catch(err){
+      console.log(err);
+  }
+}
+
 module.exports = {
     createCustomer,
     createInvoice,
@@ -846,6 +862,7 @@ module.exports = {
     deleteCustomer,
     getCustomerIdWithEmail,
     getAllCloudbizCustomers,
+    getAllCloudbizProducts,
     getProductVariantUnitCost,
     createCategory,
     updateCategory,

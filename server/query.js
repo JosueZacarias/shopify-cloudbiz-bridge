@@ -52,6 +52,19 @@ const getAllShopifyCustomers = gql`query ($cant: Int, $cursor: String){
   }
 }`;
 
+const getAllShopifyProducts = gql`query ($cant: Int, $cursor: String){
+  products(first: $cant, after:$cursor){
+    edges{
+      cursor
+      node{
+        id
+        description
+        descriptionHtml
+      }
+    }
+  }
+}`;
+
 const getCustomerVipTypeByNameQuery = gql`query ($query: String){
   customerSavedSearches(first: 1, query: $query){
     edges{
@@ -92,5 +105,7 @@ module.exports = {
   getInventoryByIDQuery,
   getProductVariantByIDQuery,
   getCustomerByIdQuery,
-  getAllShopifyCustomers
+  
+  getAllShopifyCustomers,
+  getAllShopifyProducts
 };

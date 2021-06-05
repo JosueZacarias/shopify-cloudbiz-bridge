@@ -2,15 +2,18 @@ const {
   customerVariableMutationCreate,
   customerVariableMutationDelete,
   productVariableMutationCreateUpdate,
+  productImageVariableMutationCreate,
   productVariableMutationDelete,
   productVariantVariableMutationCreateUpdate,
   productVariantVariableMutationDelete,
   collectionVariableMutationCreate,
   collectionVariableMutationDelete,
-  customersAll
+  customersAll,
+  productsAll
 } = require('./variables.js');
 const {
   getAllCloudbizCustomers,
+  getAllCloudbizProducts
 } = require('./apiClient.js');
 const {
   getToken,
@@ -30,7 +33,8 @@ const {
   deleteProductRelationship,
   deleteCustomerVIPTypeRelationship,
   deleteCollectionRelationship,
-  getAllFirestoreCustomers
+  getAllFirestoreCustomers,
+  getCollectionDataFromFireStore,
 } = require('./firestoreQuery.js');
 
 const {
@@ -47,10 +51,11 @@ const {
 
 const {
   getProductVariantByIDQuery,
-  getAllShopifyCustomers
+  getAllShopifyCustomers,
+  getAllShopifyProducts
 } = require('./query.js');
 
-const verifyChangesOnCloudbiz = async () => {
+const verifyCustomersChangesOnCloudbiz = async () => {
   try{
     const token = await getToken();
     var cant = 10;
@@ -90,6 +95,66 @@ const verifyChangesOnCloudbiz = async () => {
   }
 };
 
+const verifyProductsChangesOnShopify = async() => {
+  try{
+    const token = await getToken();
+    var cant = 10;
+    var cursor = null;
+    var dates = getDateIntervalForConsults();
+    //Datos de productos en Firestore
+    var firestoreProductsCreated = await getCollectionDataFromFireStore('product');
+    var firestoreProductsCount = firestoreProductsCreated.length;
+
+    //Datos de productos en Cloudbiz
+    var cloudbizProducts = await getCloudbizProductsArray(token);
+    var cloudbizProductsCount = cloudbizProducts.length;
+
+    var shopifyProducts = await getShopifyProductsArray(cant,cursor);
+    var shopifyProductsCount = shopifyProducts.length;
+
+    var variables = undefined;
+
+    cloudbizProducts.forEach(item => {
+      var categoryRelation = await getCollectionRelationship(null,item.category.id);
+      var images = await productImageVariableMutationCreate(item.name,item.image);
+      var price = item.filter(price => {
+        if(price.price_list.is_default == 1){
+          return price;
+        }
+      });
+      var taxable = item.taxes.length>0?true:false;
+      var taxaIncluded = (price.with_tax==1?true:false);
+      
+      if(taxaIncluded){
+        
+      }
+      var productVariant = await productVariantVariableMutationCreateUpdate(item,item.code,null,taxable,item.title,price);
+      if(cloudbizProductsCount > 0 && cloudbizProductsCount > firestoreProductsCount && cloudbizProductsCount > shopifyProductsCount){
+        variables = await productVariableMutationCreateUpdate(
+          item.description,
+          item.is_inventory==1?true:false,
+          "ACTIVE",
+          [],
+          item.name,
+          [],
+          "",
+          item.type,
+          [
+            images
+          ],
+          [categoryRelation.shopifyReference],
+          []
+        );
+      }else if(cloudbizProductsCount > 0  && cloudbizProductsCount == firestoreProductsCount && cloudbizProductsCount == shopifyProductsCount){
+
+      }
+    });
+    return true;
+  }catch(err){
+    console.log(err);
+  }
+};
+
 const getShopifyCustomersArray = async (cant,cursor,variable = null) => {
   try{
     if(variable == null){
@@ -107,6 +172,28 @@ const getShopifyCustomersArray = async (cant,cursor,variable = null) => {
     }
 
     return shopifyClients;
+  }catch(err){
+    console.log(err);
+  }
+};
+
+const getShopifyProductsArray = async (cant,cursor,variable = null) => {
+  try{
+    if(variable == null){
+      variable = await productsAll(cant,cursor);
+    }
+    var shopifyProductsQuery = await graphQLClient(getAllShopifyProducts,variable);
+    var haveMore = shopifyProductsQuery.products.pageInfo.hasNextPage;
+    var shopifyProducts = [...shopifyProductsQuery.customers.edges];
+    if(haveMore){
+      cant += 10;
+      cursor = shopifyProducts.pop().cursor;
+      variable = await productsAll(cant,cursor);
+      var products = await getShopifyProductsArray(cant,cursor,variable);
+      shopifyProducts.push(products);
+    }
+
+    return shopifyProducts;
   }catch(err){
     console.log(err);
   }
@@ -150,6 +237,40 @@ const getCloudbizCustomersArray = async (token,cant = 1) => {
   }
 };
 
+const getCloudbizProductsArray = async(token,cant = 1) => {
+  try{
+    var products = [];
+    const noNeedFields = [
+      'deliver_pack',
+      'only_pack',
+      'conversion_rate',
+      'deleted_at'
+    ];
+    var getProducts = await getAllCloudbizProducts(token,cant);
+    var productsCount = getProducts.pop().rows;
+    if(productsCount > cant){
+      getProducts = await getAllCloudbizProducts(token,4);
+      getProducts.pop();
+      getProducts = [...getProducts];
+      products = getProducts.map((item) => {
+        noNeedFields.forEach((key) => {
+          delete item[key];
+        });
+        var keys = Object.keys(item);
+        keys.forEach(key => {
+          if(item[key] == null){
+            item[key] = "";
+          }
+        });
+        return item;
+      });
+    }
+    return products;
+  }catch(err){
+    console.log(err);
+  }
+}
+
 const updateCustomerOnShopify = async () => {
   try{
     const token = await getToken();
@@ -171,15 +292,6 @@ const updateCustomerOnShopify = async () => {
       console.log(firestoreSaved);
     });
     return clients;
-  }catch(err){
-    console.log(err);
-  }
-};
-
-const updateProductOnShopify = async() => {
-  try{
-    const token = await getToken();
-    const dates = getDateIntervalForConsults();
   }catch(err){
     console.log(err);
   }
@@ -233,9 +345,10 @@ const getDateIntervalForConsults = () => {
 /*******************************************************/
 
 const updateDataFromCloudbizToShopify = async () => {
-  //await updateCustomerOnShopify();
+  return await verifyCustomersChangesOnCloudbiz();
 };
 
 module.exports = {
-  verifyChangesOnCloudbiz
+  verifyCustomersChangesOnCloudbiz,
+  verifyProductsChangesOnShopify,
 };
