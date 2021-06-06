@@ -120,38 +120,38 @@ const customerVariableMutationDelete = async(id) => {
   }
 };
 
-const productVariableMutationCreateUpdate = async(descriptionHtml,published,status,tags,title,variants,vendor,productType,images,collectionsToJoin,collectionsToLeave,id = null ) => {
-  let input = {};
-  if(id != null){
-    input = {
-      "id": id,
-      "descriptionHtml":descriptionHtml,
-      "published":published,
-      "status":status,
-      "tags":tags,
-      "title":title,
-      "variants":variants,
-      "vendor":vendor,
-      "productType":productType,
-      "images":images,
-      "collectionsToJoin":collectionsToJoin,
-      "collectionsToLeave":collectionsToLeave
-    };
-  }else{
-    input = {
-      "descriptionHtml":descriptionHtml,
-      "published":published,
-      "status":status,
-      "tags":tags,
-      "title":title,
-      "variants":variants,
-      "vendor":vendor,
-      "productType":productType,
-      "images":images,
-      "collectionsToJoin":collectionsToJoin,
-      "collectionsToLeave":collectionsToLeave
-    };
-  }
+const productCreateMutation = async(descriptionHtml,published,status,tags,title,variants,vendor,productType,images,collectionsToJoin,collectionsToLeave) => {
+  let input = {
+    "descriptionHtml":descriptionHtml,
+    "published":published,
+    "status":status,
+    "tags":tags,
+    "title":title,
+    "variants":variants,
+    "vendor":vendor,
+    "productType":productType,
+    "images":images,
+    "collectionsToJoin":collectionsToJoin,
+    "collectionsToLeave":collectionsToLeave
+  };
+  return input;
+};
+
+const productUpdateMutation = async(id,descriptionHtml,published,status,tags,title,variants,vendor,productType,images,collectionsToJoin,collectionsToLeave) => {
+  let input = {
+    "id": id,
+    "descriptionHtml":descriptionHtml,
+    "published":published,
+    "status":status,
+    "tags":tags,
+    "title":title,
+    "variants":variants,
+    "vendor":vendor,
+    "productType":productType,
+    "images":images,
+    "collectionsToJoin":collectionsToJoin,
+    "collectionsToLeave":collectionsToLeave
+  };
   return input;
 };
 
@@ -174,7 +174,18 @@ const productVariableMutationDelete = async(id) => {
   }
 };
 
-const productVariantVariableMutationCreateUpdate = async(productId,sku,taxCode,taxable,title,price,compareAtPrice,imageSrc,inventoryItem,status = "ACTIVE",id = null) => {
+const productVariantVariableMutationCreateUpdate = async( productId,
+                                                          sku,
+                                                          taxCode,
+                                                          taxable,
+                                                          title,
+                                                          price,
+                                                          compareAtPrice,
+                                                          imageSrc,
+                                                          inventoryItem,
+                                                          status = "ACTIVE",
+                                                          inventoryItemInput,
+                                                          id = null) => {
   let input = {};
   if(id != null){
     input = {
@@ -189,7 +200,8 @@ const productVariantVariableMutationCreateUpdate = async(productId,sku,taxCode,t
         "compareAtPrice":compareAtPrice,
         "imageSrc":imageSrc,
         "inventoryItem":inventoryItem,
-        "status": status
+        "status": status,
+        "InventoryItemInput": inventoryItemInput
       }
     }
   }else{
@@ -204,7 +216,8 @@ const productVariantVariableMutationCreateUpdate = async(productId,sku,taxCode,t
         "compareAtPrice":compareAtPrice,
         "imageSrc":imageSrc,
         "inventoryItem":inventoryItem,
-        "status": status
+        "status": status,
+        "InventoryItemInput": inventoryItemInput
       }
     }
   }
@@ -216,6 +229,188 @@ const productVariantVariableMutationDelete = async(id) => {
     "id": id
   }
 };
+
+const productInventoryItemInput = async(cost,tracked ) => {
+  return {
+    "cost": cost,
+    "tracked": tracked
+  }
+};
+
+/**
+ * 
+ * @param {String} title 
+ * @param {DateTime} startAt 
+ * @param {DateTime} endAt 
+ * @param {DiscountMinimumRequirementInput} minimumRequirement 
+ * @param {DiscountCustomerGetsInput} customerGets 
+ * @returns Object
+ */
+const automaticBasicDiscount = async(title,startAt,endAt,minimumRequirement,customerGets) => {
+  return {
+    "input":{
+      "title": title,
+      "startsAt": startAt,
+      "endsAt": endAt,
+      "minimumRequirement": minimumRequirement,
+      "customerGets": customerGets
+    }
+  }
+}
+
+/**
+ * 
+ * @param {DiscountMinimumQuantityInput} quantity 
+ * @param {DiscountMinimumSubtotalInput} subtotal 
+ * @returns Object
+ */
+const DiscountMinimumRequirementInput = async(quantity,subtotal ) => {
+  return {
+    "quantity": quantity,
+    "subtotal": subtotal
+  };
+};
+
+/**
+ * 
+ * @param {UnsignedInt64} greaterThanOrEqualToQuantity 
+ * @returns Object
+ */
+const DiscountMinimumQuantityInput = async(greaterThanOrEqualToQuantity ) => {
+  return {
+    "greaterThanOrEqualToQuantity": greaterThanOrEqualToQuantity
+  };
+};
+
+/**
+ * 
+ * @param {Decimal} greaterThanOrEqualToSubtotal 
+ * @returns Object
+ */
+const DiscountMinimumSubtotalInput = async(greaterThanOrEqualToSubtotal ) => {
+  return {
+    "greaterThanOrEqualToSubtotal":greaterThanOrEqualToSubtotal 
+  };
+}
+
+/**
+ * 
+ * @param {Boolean} appliesOnOneTimePurchase 
+ * @param {Boolean} appliesOnSubscription 
+ * @param {DiscountItemsInput} items 
+ * @param {DiscountCustomerGetsValueInput} value 
+ * @returns 
+ */
+const DiscountCustomerGetsInput  = async( appliesOnOneTimePurchase,
+                                          appliesOnSubscription,
+                                          items,
+                                          value 
+                                          ) => {
+  return {
+    "appliesOnOneTimePurchase":appliesOnOneTimePurchase,
+    "appliesOnSubscription": appliesOnSubscription,
+    "items": items,
+    "value": value
+  }
+};
+/**
+ * 
+ * @param {bolean} all 
+ * @param {DiscountCollectionsInput} collections 
+ * @param {DiscountProductsInput} products 
+ * @returns Object of DiscountItemsInput
+ */
+const DiscountItemsInput = async (all,collections,products) =>{
+  return {
+    "all": all,
+    "collections": collections,
+    "products": products
+  };
+};
+//parámetros son arrays de ID de collections, agregarlos o quitarlos
+/**
+ * 
+ * @param {[ID!] Collection} add 
+ * @param {[ID!] Collection} remove 
+ * @returns 
+ */
+const DiscountCollectionsInput = async(add,remove ) => {
+  return {
+    "add": add,
+    "remove": remove
+  };
+};
+
+//parámetros son arrays de ID de productos o variantes
+/**
+ * 
+ * @param {[ID!] productsVariants} productVariantsToAdd 
+ * @param {[ID!] productsVariants} productVariantsToRemove 
+ * @param {[ID!] products} productsToAdd 
+ * @param {[ID!] products} productsToRemove 
+ * @returns 
+ */
+const DiscountProductsInput = async(productVariantsToAdd,productVariantsToRemove,productsToAdd,productsToRemove) => {
+  return {
+    "productVariantsToAdd": productVariantsToAdd,
+    "productVariantsToRemove": productVariantsToRemove,
+    "productsToAdd": productsToAdd,
+    "productsToRemove": productsToRemove
+  };
+};
+
+/**
+ * 
+ * @param {DiscountAmountInput } discountAmount 
+ * @param {DiscountOnQuantityInput} discountOnQuantity 
+ * @param {Float} percentage 
+ * @returns 
+ */
+const DiscountCustomerGetsValueInput = async(discountAmount,discountOnQuantity,percentage) => {
+  return {
+    "discountAmount": discountAmount,
+    "discountOnQuantity": discountOnQuantity,
+    "percentage": percentage 
+  };
+};
+
+/**
+ * 
+ * @param {Decimal} amount 
+ * @param {Boolean} appliesOnEachItem 
+ * @returns Object
+ */
+const DiscountAmountInput = async(amount,appliesOnEachItem ) => {
+  return {
+    "amount": amount,
+    "appliesOnEachItem": appliesOnEachItem 
+  };
+};
+
+/**
+ * 
+ * @param {DiscountEffectInput} effect 
+ * @param {UnsignedInt64} quantity 
+ * @returns Object
+ */
+const DiscountOnQuantityInput  = async(effect,quantity) => {
+  return {
+    "effect": effect,
+    "quantity": quantity
+  };
+};
+
+/**
+ * 
+ * @param {Float} percentage 
+ * @returns Object
+ */
+const DiscountEffectInput = async(percentage) => {
+  return {
+    "percentage": percentage 
+  };
+};
+
 
 const collectionVariableMutationCreate = async(descriptionHtml,title,products,id = null) => {
   let input = {};
@@ -267,6 +462,8 @@ module.exports = {
   productVariantVariableMutationDelete,
   collectionVariableMutationCreate,
   collectionVariableMutationDelete,
+  productInventoryItemInput,
+  automaticBasicDiscount,
 
   customersAll,
   productsAll

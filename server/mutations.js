@@ -93,6 +93,18 @@ const productVariantDelete = gql`mutation ($id: ID!) {
   }
 }`;
 
+const discountCreate = gql`mutation ($input: DiscountAutomaticBasicInput!) {
+  discountAutomaticBasicCreate(input: $input) {
+    automaticDiscountNode {
+      id
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}`;
+
 const collectionCreateUpdate = gql`mutation ($input: CollectionInput!) {
   collectionCreate(input: $input) {
     collection {
@@ -126,6 +138,7 @@ module.exports = {
   productDelete,
   productVariantCreateUpdate,
   productVariantDelete,
+  discountCreate,
   collectionCreateUpdate,
   collectionDelete
 };

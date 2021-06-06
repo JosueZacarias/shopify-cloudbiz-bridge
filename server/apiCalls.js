@@ -8,12 +8,15 @@ const {
   productVariantVariableMutationDelete,
   collectionVariableMutationCreate,
   collectionVariableMutationDelete,
+  productInventoryItemInput,
+  automaticBasicDiscount,
   customersAll,
   productsAll
 } = require('./variables.js');
 const {
   getAllCloudbizCustomers,
-  getAllCloudbizProducts
+  getAllCloudbizProducts,
+  getAllCloudbizDiscounts
 } = require('./apiClient.js');
 const {
   getToken,
@@ -46,7 +49,7 @@ const {
   productVariantCreateUpdate,
   productVariantDelete,
   collectionCreateUpdate,
-  collectionDelete
+  collectionDelete,
 } = require('./mutations.js');
 
 const {
@@ -100,7 +103,7 @@ const verifyProductsChangesOnShopify = async() => {
     const token = await getToken();
     var cant = 10;
     var cursor = null;
-    var dates = getDateIntervalForConsults();
+
     //Datos de productos en Firestore
     var firestoreProductsCreated = await getCollectionDataFromFireStore('product');
     var firestoreProductsCount = firestoreProductsCreated.length;
@@ -117,7 +120,8 @@ const verifyProductsChangesOnShopify = async() => {
     cloudbizProducts.forEach(item => {
       var categoryRelation = await getCollectionRelationship(null,item.category.id);
       var images = await productImageVariableMutationCreate(item.name,item.image);
-      var price = item.filter(price => {
+      var totalPrice = 0.0;
+      var price = item.prices.filter(price => {
         if(price.price_list.is_default == 1){
           return price;
         }
@@ -126,9 +130,13 @@ const verifyProductsChangesOnShopify = async() => {
       var taxaIncluded = (price.with_tax==1?true:false);
       
       if(taxaIncluded){
-        
+        totalPrice = price.price*0.15;
+      }else{
+        totalPrice = price.price;
       }
-      var productVariant = await productVariantVariableMutationCreateUpdate(item,item.code,null,taxable,item.title,price);
+      var inventory = await productInventoryItemInput(item.inventory.cost_price,true);
+
+      var productVariant = await productVariantVariableMutationCreateUpdate(item,item.code,null,taxable,item.title,totalPrice);
       if(cloudbizProductsCount > 0 && cloudbizProductsCount > firestoreProductsCount && cloudbizProductsCount > shopifyProductsCount){
         variables = await productVariableMutationCreateUpdate(
           item.description,
@@ -154,6 +162,21 @@ const verifyProductsChangesOnShopify = async() => {
     console.log(err);
   }
 };
+
+const verifyDiscountsChangesOnShopify = async() => {
+  try{
+    const token = await getToken();
+    var discounts = await getAllCloudbizDiscounts(token);
+    
+    var insertDiscountsOnShopify;
+    discounts.forEach(discount => {
+      var variables = await automaticBasicDiscount(discount.title,);
+      insertDiscountsOnShopify = await graphQLClient();
+    })
+  }catch(error){
+    console.error(error);
+  }
+}
 
 const getShopifyCustomersArray = async (cant,cursor,variable = null) => {
   try{
