@@ -57,7 +57,8 @@ const {
 const {
   getProductVariantByIDQuery,
   getAllShopifyCustomers,
-  getAllShopifyProducts
+  getAllShopifyProducts,
+  getAllShopifyCollections
 } = require('./query.js');
 
 const verifyCustomersChangesOnCloudbiz = async () => {
@@ -100,7 +101,7 @@ const verifyCustomersChangesOnCloudbiz = async () => {
   }
 };
 
-const verifyCollectionsChangesOnCloudbiz = async() => {
+const verifyCollectionsChangesOnCloudbiz = async () => {
   try{
     var cant = 10;
     var cursor = null;
@@ -110,14 +111,27 @@ const verifyCollectionsChangesOnCloudbiz = async() => {
     //Categorías en cloudbiz
     const token = await getToken();
     const cloudbizCollections = await getAllCategoryInfoFromCloudbiz(token);
-    const cloudbizCollectionsCount = cloudbizCollections.length;
+    const cloudbizCollectionsCount = cloudbizCollections.subcategories.length;
     //Categorías en Shopify
     const shopifyCollections = await getShopifyCollectionsArray(cant,cursor);
     const shopifyCollectionsCount = shopifyCollections.length;
 
-    console.log(firestoreCollections);
-    console.log(cloudbizCollections);
-    console.log(shopifyCollections);
+    //console.log(firestoreCollections);
+    //console.log(cloudbizCollections);
+    //console.log(shopifyCollections);
+
+    if(cloudbizCollectionsCount > 0 && cloudbizCollectionsCount > shopifyCollectionsCount && cloudbizCollectionsCount > firestoreCollectionsCount){
+      cloudbizCollections.subcategories.forEach(async collection => {
+        var variables = await collectionVariableMutationCreate(collection.description,collection.description,collection.name);
+        var queryResult = await graphQLClient(collectionCreateUpdate,variables);
+        await insertCollectionRelationship(queryResult.collectionCreate.collection.id,collection.id);
+      });
+    }else if(cloudbizCollectionsCount > 0 && cloudbizCollectionsCount === shopifyCollectionsCount && cloudbizCollectionsCount === firestoreCollectionsCount){
+      cloudbizCollections.subcategories.forEach(async collection => {
+        var variables = await collectionVariableMutationCreate(collection.description,collection.description,collection.name,collection.id);
+        var queryResult = await graphQLClient(collectionCreateUpdate,variables);
+      });
+    }
 
   }catch(err){
     console.error(err);
@@ -143,7 +157,7 @@ const verifyProductsChangesOnShopify = async() => {
 
     var variables = undefined;
 
-    cloudbizProducts.forEach(item => {
+    cloudbizProducts.forEach(async item => {
       //Verificar la categoría o colección del producto
       var categoryRelation = await getCollectionRelationship(null,item.category.id);
       //Crear variable de creación de imagén del producto
@@ -203,8 +217,8 @@ const verifyDiscountsChangesOnShopify = async() => {
     var discounts = await getAllCloudbizDiscounts(token);
     
     var insertDiscountsOnShopify;
-    discounts.forEach(discount => {
-      var variables = await automaticBasicDiscount(discount.title,);
+    discounts.forEach(async discount => {
+      var variables = await automaticBasicDiscount(discount.title);
       insertDiscountsOnShopify = await graphQLClient();
     })
   }catch(error){

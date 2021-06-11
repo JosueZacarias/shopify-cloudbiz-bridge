@@ -9,7 +9,7 @@ const { default: createShopifyAuth } = require('@shopify/koa-shopify-auth');
 const { verifyRequest } = require('@shopify/koa-shopify-auth');
 const { default: Shopify, ApiVersion } = require('@shopify/shopify-api');
 const Router = require('koa-router');
-const { verifyProductsChangesOnShopify } = require('./server/apiCalls.js');
+const { verifyCollectionsChangesOnCloudbiz } = require('./server/apiCalls.js');
 //const { setQueryMutationAuth } = require('./server/apiClient.js');
 dotenv.config();
 const { SHOPIFY_API_SECRET_KEY, SHOPIFY_API_KEY } = process.env;

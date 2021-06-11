@@ -452,14 +452,14 @@ const DiscountEffectInput = async(percentage) => {
 };
 
 
-const collectionVariableMutationCreate = async(descriptionHtml,title,products,id = null) => {
+const collectionVariableMutationCreate = async(description,descriptionHtml,title,id = null) => {
   let input = {};
   //for update collection
   if(id != null){
     input = {
       "input": {
         "descriptionHtml": descriptionHtml,
-        "products": products,
+        "description": description,
         "title": title,
         "id": id
       }
@@ -468,7 +468,7 @@ const collectionVariableMutationCreate = async(descriptionHtml,title,products,id
     input = {
       "input": {
         "descriptionHtml": descriptionHtml,
-        "products": products,
+        "description": description,
         "title": title
       }
     };
@@ -495,7 +495,6 @@ module.exports = {
 
   customerVariableMutationCreate,
   customerVariableMutationDelete,
-  productVariableMutationCreateUpdate,
   productImageVariableMutationCreate,
   productVariableMutationDelete,
   productVariantVariableMutationCreateUpdate,
