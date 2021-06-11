@@ -62,6 +62,29 @@ const getAllShopifyProducts = gql`query ($cant: Int, $cursor: String){
         descriptionHtml
       }
     }
+    pageInfo{
+      hasNextPage
+      hasPreviousPage
+    }
+  }
+}`;
+
+const getAllShopifyCollections = gql`query ($cant: Int, $cursor: String){
+  collections(first: $cant, after: $cursor){
+    edges{
+      node{
+        description
+        descriptionHtml
+        id
+        productsCount
+        title
+        updatedAt
+      }
+    }
+    pageInfo{
+      hasNextPage
+      hasPreviousPage
+    }
   }
 }`;
 
@@ -107,5 +130,6 @@ module.exports = {
   getCustomerByIdQuery,
   
   getAllShopifyCustomers,
-  getAllShopifyProducts
+  getAllShopifyProducts,
+  getAllShopifyCollections
 };

@@ -123,7 +123,7 @@ app.prepare().then(() => {
     console.log(`> Ready on http://localhost:${port}`);
     // try{
     //   setInterval(async function(){
-    //     var result = await verifyProductsChangesOnShopify();
+    //     var result = await verifyCollectionsChangesOnCloudbiz();
     //     console.log(result);
     //   },10000);
     // }

@@ -880,6 +880,7 @@ module.exports = {
     getAllCloudbizCustomers,
     getAllCloudbizProducts,
     getAllCloudbizDiscounts,
+    getAllCategoryInfoFromCloudbiz,
     getProductVariantUnitCost,
     createCategory,
     updateCategory,

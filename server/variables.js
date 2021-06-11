@@ -72,6 +72,21 @@ const productsAll = async(cant,cursor) => {
   return variables;
 };
 
+const collectionsAll = async (cant,cursor) => {
+  var variables;
+  if(cursor == null){
+    variables = {
+      "cant":cant
+    };
+  }else if(cursor !== null){
+    variables = {
+      "cant":cant,
+      "cursor":cursor
+    };
+  }
+  return variables;
+}
+
 //SECCIÓN DE VARIABLES DE ESCRITURA O MUTACIONES
 const customerVariableMutationCreate = async (email,firstName,lastName,phone1,phone2,address1,city,id = null) => {
   let input = {};
@@ -236,6 +251,31 @@ const productInventoryItemInput = async(cost,tracked ) => {
     "tracked": tracked
   }
 };
+
+const createAutomaticBasicDiscountVar = async(title,startAt,endAt,percentage,productId) => {
+  var minimumRequirement = {
+    minimumRequirement: {
+      quantity:{
+        greaterThanOrEqualToQuantity: "1"
+      }
+    }
+  };
+  
+  var customerGets = {
+    customerGets:{
+      value: {
+        percentage: percentage
+      },
+      items:{
+        products:{
+          productsToAdd:[productId]
+        }
+      }
+    }
+  }
+  const variable = await automaticBasicDiscount(title,startAt,endAt,minimumRequirement,customerGets);
+  return variable;
+}
 
 /**
  * 
@@ -464,7 +504,9 @@ module.exports = {
   collectionVariableMutationDelete,
   productInventoryItemInput,
   automaticBasicDiscount,
+  createAutomaticBasicDiscountVar,
 
   customersAll,
-  productsAll
+  productsAll,
+  collectionsAll
 }

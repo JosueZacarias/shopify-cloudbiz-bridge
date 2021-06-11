@@ -11,12 +11,14 @@ const {
   productInventoryItemInput,
   automaticBasicDiscount,
   customersAll,
-  productsAll
+  productsAll,
+  collectionsAll
 } = require('./variables.js');
 const {
   getAllCloudbizCustomers,
   getAllCloudbizProducts,
-  getAllCloudbizDiscounts
+  getAllCloudbizDiscounts,
+  getAllCategoryInfoFromCloudbiz
 } = require('./apiClient.js');
 const {
   getToken,
@@ -98,6 +100,30 @@ const verifyCustomersChangesOnCloudbiz = async () => {
   }
 };
 
+const verifyCollectionsChangesOnCloudbiz = async() => {
+  try{
+    var cant = 10;
+    var cursor = null;
+    //Categorías en Firestore
+    const firestoreCollections = await getCollectionDataFromFireStore('category');
+    const firestoreCollectionsCount = firestoreCollections.length;
+    //Categorías en cloudbiz
+    const token = await getToken();
+    const cloudbizCollections = await getAllCategoryInfoFromCloudbiz(token);
+    const cloudbizCollectionsCount = cloudbizCollections.length;
+    //Categorías en Shopify
+    const shopifyCollections = await getShopifyCollectionsArray(cant,cursor);
+    const shopifyCollectionsCount = shopifyCollections.length;
+
+    console.log(firestoreCollections);
+    console.log(cloudbizCollections);
+    console.log(shopifyCollections);
+
+  }catch(err){
+    console.error(err);
+  }
+}
+
 const verifyProductsChangesOnShopify = async() => {
   try{
     const token = await getToken();
@@ -118,25 +144,33 @@ const verifyProductsChangesOnShopify = async() => {
     var variables = undefined;
 
     cloudbizProducts.forEach(item => {
+      //Verificar la categoría o colección del producto
       var categoryRelation = await getCollectionRelationship(null,item.category.id);
+      //Crear variable de creación de imagén del producto
       var images = await productImageVariableMutationCreate(item.name,item.image);
       var totalPrice = 0.0;
+      //Obtener el precio por defecto del producto en cloudbiz
       var price = item.prices.filter(price => {
         if(price.price_list.is_default == 1){
           return price;
         }
       });
+      //verificar si el producto tiene impuestos aplicados
       var taxable = item.taxes.length>0?true:false;
+      //Verificar si el precio del producto tiene incluido el impuesto en su total
       var taxaIncluded = (price.with_tax==1?true:false);
-      
+
+      //Incluir o no el impuesto en el precio del producto
       if(taxaIncluded){
         totalPrice = price.price*0.15;
       }else{
         totalPrice = price.price;
       }
+      //para establecer el precio de costo del producto
       var inventory = await productInventoryItemInput(item.inventory.cost_price,true);
 
       var productVariant = await productVariantVariableMutationCreateUpdate(item,item.code,null,taxable,item.title,totalPrice);
+
       if(cloudbizProductsCount > 0 && cloudbizProductsCount > firestoreProductsCount && cloudbizProductsCount > shopifyProductsCount){
         variables = await productVariableMutationCreateUpdate(
           item.description,
@@ -219,6 +253,28 @@ const getShopifyProductsArray = async (cant,cursor,variable = null) => {
     return shopifyProducts;
   }catch(err){
     console.log(err);
+  }
+};
+
+const getShopifyCollectionsArray = async (cant,cursor,variable = null) => {
+  try{
+    if(variable == null){
+      variable = await collectionsAll(cant,cursor);
+    }
+    var shopifyCollectionQuery = await graphQLClient(getAllShopifyCollections,variable);
+    var haveMore = shopifyCollectionQuery.collections.pageInfo.hasNextPage;
+    var shopifyCollection = [...shopifyCollectionQuery.collections.edges];
+    if(haveMore){
+      cant += 10;
+      cursor = shopifyCollection.pop().cursor;
+      variable = await collectionsAll(cant,cursor);
+      var collection = await getShopifyCollectionsArray(cant,cursor,variable);
+      shopifyCollection.push(collection);
+    }
+
+    return shopifyCollection;
+  }catch(err){
+    console.error(err);
   }
 };
 
@@ -374,4 +430,5 @@ const updateDataFromCloudbizToShopify = async () => {
 module.exports = {
   verifyCustomersChangesOnCloudbiz,
   verifyProductsChangesOnShopify,
+  verifyCollectionsChangesOnCloudbiz
 };
