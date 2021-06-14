@@ -43,47 +43,42 @@ const collectionWithProductVariableQuery = async(collectionId,productCount) => {
 };
 
 const customersAll = async (cant,cursor) => {
-  var variables;
-  if(cursor == null){
-    variables = {
-      "cant":cant
-    };
-  }else if(cursor !== null){
-    variables = {
-      "cant":cant,
-      "cursor":cursor
-    };
-  }
+  var variables = {
+    "cant":cant,
+    "cursor":cursor
+  };
   return variables;
 };
 
 const productsAll = async(cant,cursor) => {
-  var variables;
-  if(cursor == null){
-    variables = {
-      "cant":cant
-    };
-  }else if(cursor !== null){
-    variables = {
-      "cant":cant,
-      "cursor":cursor
-    };
-  }
+  const variables = {
+    "cant":cant,
+    "cursor":cursor
+  };
   return variables;
 };
 
 const collectionsAll = async (cant,cursor) => {
-  var variables;
-  if(cursor == null){
-    variables = {
-      "cant":cant
-    };
-  }else if(cursor !== null){
-    variables = {
-      "cant":cant,
-      "cursor":cursor
-    };
-  }
+  const variables = {
+    "cant":cant,
+    "cursor":cursor
+  };
+  return variables;
+}
+
+const discountAll = async (cant,cursor) => {
+  const variables = {
+    "cant":cant,
+    "cursor":cursor
+  };
+  return variables;
+}
+
+const locationAll = async (cant,cursor) => {
+  const variables = {
+    "cant":cant,
+    "cursor":cursor
+  };
   return variables;
 }
 
@@ -135,24 +130,36 @@ const customerVariableMutationDelete = async(id) => {
   }
 };
 
-const productCreateMutation = async(descriptionHtml,published,status,tags,title,variants,vendor,productType,images,collectionsToJoin,collectionsToLeave) => {
+const productVariableMutationCreate = async(descriptionHtml,
+                                    published,
+                                    status,
+                                    tags,
+                                    title,
+                                    variants,
+                                    vendor,
+                                    productType,
+                                    images,
+                                    collectionsToJoin,
+                                    collectionsToLeave) => {
   let input = {
-    "descriptionHtml":descriptionHtml,
-    "published":published,
-    "status":status,
-    "tags":tags,
-    "title":title,
-    "variants":variants,
-    "vendor":vendor,
-    "productType":productType,
-    "images":images,
-    "collectionsToJoin":collectionsToJoin,
-    "collectionsToLeave":collectionsToLeave
+    "input":{
+      "descriptionHtml":descriptionHtml,
+      "published":published,
+      "status":status,
+      "tags":tags,
+      "title":title,
+      "variants":variants,
+      "vendor":vendor,
+      "productType":productType,
+      "collectionsToJoin":collectionsToJoin,
+      "collectionsToLeave":collectionsToLeave
+    },
+    "media": images
   };
   return input;
 };
 
-const productUpdateMutation = async(id,descriptionHtml,published,status,tags,title,variants,vendor,productType,images,collectionsToJoin,collectionsToLeave) => {
+const productVariableMutationUpdate = async(id,descriptionHtml,published,status,tags,title,variants,vendor,productType,images,collectionsToJoin,collectionsToLeave) => {
   let input = {
     "id": id,
     "descriptionHtml":descriptionHtml,
@@ -170,17 +177,6 @@ const productUpdateMutation = async(id,descriptionHtml,published,status,tags,tit
   return input;
 };
 
-const productImageVariableMutationCreate = async (altImage,externalSource,mediaContentType = "IMAGE") => {
-  let createMediaInput = {
-    "createMediaInput": {
-      "alt": altImage,
-      "mediaContentType": mediaContentType,
-      "originalSource": externalSource
-    }
-  };
-  return createMediaInput;
-};
-
 const productVariableMutationDelete = async(id) => {
   return {
     "input": {
@@ -189,51 +185,83 @@ const productVariableMutationDelete = async(id) => {
   }
 };
 
-const productVariantVariableMutationCreateUpdate = async( productId,
-                                                          sku,
-                                                          taxCode,
-                                                          taxable,
-                                                          title,
-                                                          price,
-                                                          compareAtPrice,
-                                                          imageSrc,
-                                                          inventoryItem,
-                                                          status = "ACTIVE",
-                                                          inventoryItemInput,
-                                                          id = null) => {
-  let input = {};
-  if(id != null){
-    input = {
-      "input":{
-        "id": id,
-        "productId":productId,
-        "sku":sku,
-        "taxCode":taxCode,
-        "taxable":taxable,
-        "title":title,
-        "price":price,
-        "compareAtPrice":compareAtPrice,
-        "imageSrc":imageSrc,
-        "inventoryItem":inventoryItem,
-        "status": status,
-        "InventoryItemInput": inventoryItemInput
-      }
+const productMediaVariableMutationCreate = async(productId,alt,sourceUrl) =>{
+  return {
+    "productId": productId,
+    "media":[{
+      "alt": alt,
+      "originalSource": sourceUrl,
+      "mediaContentType": IMAGE
+    }]
+  }
+}
+
+const productImageVariableMutationCreate = async(alt,sourceUrl) => {
+  return {
+    "alt": alt,
+    "mediaContentType": "IMAGE",
+    "originalSource": sourceUrl
+  }
+}
+
+const productVariantVariableMutationCreate = async( productId,
+                                                    sku,
+                                                    taxCode,
+                                                    taxable,
+                                                    title,
+                                                    price,
+                                                    compareAtPrice,
+                                                    inventoryItem,
+                                                    inventoryQuantities,
+                                                    imageId
+                                                    ) => {
+  let input = {
+    "input":{
+      "productId":productId,
+      "sku":sku,
+      "taxCode":taxCode,
+      "taxable":taxable,
+      "title":title,
+      "price":price,
+      "compareAtPrice":compareAtPrice,
+      "inventoryItem":inventoryItem,
+      "inventoryQuantities": inventoryQuantities,
+      "inventoryManagement": "SHOPIFY",
+      "inventoryPolicy": "DENY",
+      "imageId": imageId
     }
-  }else{
-    input = {
-      "input":{
-        "productId":productId,
-        "sku":sku,
-        "taxCode":taxCode,
-        "taxable":taxable,
-        "title":title,
-        "price":price,
-        "compareAtPrice":compareAtPrice,
-        "imageSrc":imageSrc,
-        "inventoryItem":inventoryItem,
-        "status": status,
-        "InventoryItemInput": inventoryItemInput
-      }
+  }
+  return input;
+};
+
+const productVariantVariableMutationUpdate = async ( productId,
+                                                    sku,
+                                                    taxCode,
+                                                    taxable,
+                                                    title,
+                                                    price,
+                                                    compareAtPrice,
+                                                    imageSrc,
+                                                    inventoryItem,
+                                                    status = "ACTIVE",
+                                                    inventoryItemInput,
+                                                    id) => {
+  let input = {
+    "input":{
+      "id": id,
+      "productId":productId,
+      "sku":sku,
+      "taxCode":taxCode,
+      "taxable":taxable,
+      "title":title,
+      "price":price,
+      "compareAtPrice":compareAtPrice,
+      "imageSrc":imageSrc,
+      "inventoryItem":inventoryItem,
+      "inventoryManagement": "SHOPIFY",
+      "inventoryPolicy": "DENY",
+      "status": status,
+      "InventoryItemInput": inventoryItemInput
     }
   }
   return input;
@@ -252,27 +280,28 @@ const productInventoryItemInput = async(cost,tracked ) => {
   }
 };
 
-const createAutomaticBasicDiscountVar = async(title,startAt,endAt,percentage,productId) => {
+const productInventoryQuantitiesInput = async(quantity,locationId) => {
+  return {
+    "availableQuantity": quantity,
+    "locationId": locationId
+  }
+}
+
+const createAutomaticBasicDiscount = async(title,startAt,endAt,percentage) => {
   var minimumRequirement = {
-    minimumRequirement: {
-      quantity:{
-        greaterThanOrEqualToQuantity: "1"
-      }
+    "quantity":{
+      "greaterThanOrEqualToQuantity": "1"
     }
   };
   
   var customerGets = {
-    customerGets:{
-      value: {
-        percentage: percentage
-      },
-      items:{
-        products:{
-          productsToAdd:[productId]
-        }
-      }
+    "value": {
+      "percentage": percentage
+    },
+    "items":{
+      "all":true
     }
-  }
+  };
   const variable = await automaticBasicDiscount(title,startAt,endAt,minimumRequirement,customerGets);
   return variable;
 }
@@ -288,7 +317,7 @@ const createAutomaticBasicDiscountVar = async(title,startAt,endAt,percentage,pro
  */
 const automaticBasicDiscount = async(title,startAt,endAt,minimumRequirement,customerGets) => {
   return {
-    "input":{
+    "automaticBasicDiscount":{
       "title": title,
       "startsAt": startAt,
       "endsAt": endAt,
@@ -452,14 +481,13 @@ const DiscountEffectInput = async(percentage) => {
 };
 
 
-const collectionVariableMutationCreate = async(description,descriptionHtml,title,id = null) => {
+const collectionVariableMutationCreate = async(descriptionHtml,title,id = null) => {
   let input = {};
   //for update collection
   if(id != null){
     input = {
       "input": {
-        "descriptionHtml": descriptionHtml,
-        "description": description,
+        "descriptionHtml": descriptionHtml?descriptionHtml:"",
         "title": title,
         "id": id
       }
@@ -467,8 +495,7 @@ const collectionVariableMutationCreate = async(description,descriptionHtml,title
   }else{
     input = {
       "input": {
-        "descriptionHtml": descriptionHtml,
-        "description": description,
+        "descriptionHtml": descriptionHtml?descriptionHtml:"",
         "title": title
       }
     };
@@ -485,27 +512,37 @@ const collectionVariableMutationDelete = async(id) => {
 };
 
 module.exports = {
-  productVariableQuery,
-  productVariantVariableQuery,
-  inventoryVariableQuery,
   customerVariableQuery,
   customerVIPVariableQuery,
-  collectionVariableQuery,
-  collectionWithProductVariableQuery,
-
   customerVariableMutationCreate,
   customerVariableMutationDelete,
-  productImageVariableMutationCreate,
+
+  inventoryVariableQuery,
+
+  productVariableQuery,
+  productVariantVariableQuery,
   productVariableMutationDelete,
-  productVariantVariableMutationCreateUpdate,
+  productVariantVariableMutationCreate,
+  productVariantVariableMutationUpdate,
   productVariantVariableMutationDelete,
+  productVariableMutationCreate,
+  productVariableMutationUpdate,
+  productInventoryItemInput,
+  productInventoryQuantitiesInput,
+  productMediaVariableMutationCreate,
+  productImageVariableMutationCreate,
+
   collectionVariableMutationCreate,
   collectionVariableMutationDelete,
-  productInventoryItemInput,
+  collectionVariableQuery,
+  collectionWithProductVariableQuery,
+  
   automaticBasicDiscount,
-  createAutomaticBasicDiscountVar,
+  createAutomaticBasicDiscount,
 
   customersAll,
   productsAll,
-  collectionsAll
+  collectionsAll,
+  discountAll,
+  locationAll
 }

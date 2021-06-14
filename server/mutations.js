@@ -37,8 +37,27 @@ const customerDelete = gql`mutation ($input: CustomerDeleteInput!) {
   }
 }`;
 
-const productCreateUpdate = gql`mutation ($input: ProductInput!) {
+const productCreateMutation = gql`mutation ($input: ProductInput!) {
   productCreate(input: $input) {
+    product {
+      id
+      images(first: 10){
+        edges{
+          node{
+            id
+          }
+        }
+      }
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}`;
+
+const productUpdateMutation = gql`mutation ($input: ProductInput!) {
+  productUpdate(input: $input) {
     product {
       id
     }
@@ -52,7 +71,7 @@ const productCreateUpdate = gql`mutation ($input: ProductInput!) {
   }
 }`;
 
-const productDelete = gql`mutation ($input: ProductDeleteInput!) {
+const productDeleteMutation = gql`mutation ($input: ProductDeleteInput!) {
   productDelete(input: $input) {
     deletedProductId
     shop {
@@ -65,8 +84,23 @@ const productDelete = gql`mutation ($input: ProductDeleteInput!) {
   }
 }`;
 
-const productVariantCreateUpdate = gql`mutation ($input: ProductVariantInput!) {
+const productVariantCreate = gql`mutation ($input: ProductVariantInput!) {
   productVariantCreate(input: $input) {
+    product {
+      id
+    }
+    productVariant {
+      id
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}`;
+
+const productVariantUpdate = gql`mutation ($input: ProductVariantInput!) {
+  productVariantUpdate(input: $input) {
     product {
       id
     }
@@ -93,8 +127,8 @@ const productVariantDelete = gql`mutation ($id: ID!) {
   }
 }`;
 
-const discountCreate = gql`mutation ($input: DiscountAutomaticBasicInput!) {
-  discountAutomaticBasicCreate(input: $input) {
+const discountCreate = gql`mutation ($automaticBasicDiscount: DiscountAutomaticBasicInput!) {
+  discountAutomaticBasicCreate(automaticBasicDiscount: $automaticBasicDiscount) {
     automaticDiscountNode {
       id
     }
@@ -105,8 +139,42 @@ const discountCreate = gql`mutation ($input: DiscountAutomaticBasicInput!) {
   }
 }`;
 
-const collectionCreateUpdate = gql`mutation ($input: CollectionInput!) {
+const discountUpdate = gql`mutation ($input: DiscountAutomaticBasicInput!) {
+  discountAutomaticBasicUpdate(input: $input) {
+    automaticDiscountNode {
+      id
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}`;
+
+const discountDelete = gql`mutation ($id: ID) {
+  discountAutomaticDelete(id: $id) {
+    deletedAutomaticDiscountId
+    userErrors {
+      field
+      message
+    }
+  }
+}`;
+
+const collectionCreate = gql`mutation ($input: CollectionInput!) {
   collectionCreate(input: $input) {
+    collection {
+      id
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}`;
+
+const collectionUpdate = gql`mutation ($input: CollectionInput!) {
+  collectionUpdate(input: $input) {
     collection {
       id
     }
@@ -130,15 +198,37 @@ const collectionDelete = gql`mutation ($input: CollectionDeleteInput!) {
   }
 }`;
 
+const productMediaCreate = gql`mutation ($productId: ID!, $media: [CreateMediaInput!]!) {
+  productCreateMedia(productId: $productId, media: $media) {
+    media {
+      alt
+    }
+    mediaUserErrors {
+      code
+      field
+      message
+    }
+    product {
+      id
+    }
+  }
+}`;
+
 module.exports = {
   customerCreate,
   customerUpdate,
   customerDelete,
-  productCreateUpdate,
-  productDelete,
-  productVariantCreateUpdate,
+  productCreateMutation,
+  productUpdateMutation,
+  productDeleteMutation,
+  productMediaCreate,
+  productVariantCreate,
+  productVariantUpdate,
   productVariantDelete,
   discountCreate,
-  collectionCreateUpdate,
+  discountUpdate,
+  discountDelete,
+  collectionCreate,
+  collectionUpdate,
   collectionDelete
 };

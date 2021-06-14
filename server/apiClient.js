@@ -12,7 +12,14 @@ const {
   getLastCollectionSubId,
   insertCollectionRelationship,
   deleteCollectionRelationship,
-  getCollectionRelationship
+  getCollectionRelationship,
+
+  getLocationRelationship,
+  insertLocationRelationship,
+  deleteLocationRelationship,
+  getDiscountRelationship,
+  deleteDiscountRelationship,
+  
 } = require('./firestoreQuery.js');
 
 const {
@@ -676,6 +683,173 @@ const deleteCategory = async (ctx,token) => {
   }
 };
 
+/****************************************/
+/*********      SUCURSALES      *********/
+/****************************************/
+
+const createLocation = async (ctx,token) => {
+  try{
+    var createLocationsStatus = false;
+    var locationName = ctx.request.body.name;
+    const locationData = {
+      "name":locationName,
+      "address":ctx.request.body.address1+ ", "+ ctx.request.body.address2+ ", "+ ctx.request.body.city+ ", "+ctx.request.body.country_name,
+      "notes":"Teléfono: "+ ctx.request.body.phone
+    };
+    const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/warehouse',{
+      method:'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'token': token
+      },
+      body: JSON.stringify(locationData)
+    });
+    const response = await resp.json();
+    if(response.id != undefined){
+      const saveLocationRelationShip = await insertLocationRelationship(ctx.request.body.admin_graphql_api_id,response.id);
+      if(saveLocationRelationShip){
+        createLocationsStatus = true;
+      }
+    }
+    return createLocationsStatus;
+  }catch(err){
+    console.error(err);
+  }
+};
+
+const updateLocation = async (ctx,token) => {
+  try{
+    var updateLocationsStatus = false;
+    var warehouseReference = await getLocationRelationship(ctx.request.body.admin_graphql_api_id,null);
+    var locationName = ctx.request.body.name;
+    const locationData = {
+      "name":locationName,
+      "address":ctx.request.body.address1+ ", "+ ctx.request.body.address2+ ", "+ ctx.request.body.city+ ", "+ctx.request.body.country_name,
+      "notes":"Teléfono: "+ ctx.request.body.phone
+    };
+    const resp = await fetch(`https://apinode.micloudbiz.com/gateway-api/v1/warehouse/${warehouseReference.cloudbizReference}`,{
+      method:'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'token': token
+      },
+      body: JSON.stringify(locationData)
+    });
+    const response = await resp.json();
+    if(response.id != undefined){
+      updateLocationsStatus = true;
+    }
+
+    return updateLocationsStatus;
+  }catch(err){
+    console.error(err);
+  }
+};
+
+const deleteLocation = async (ctx,token) => {
+  try{
+    var deleteLocationsStatus = false;
+    var warehouseReference = await getLocationRelationship(ctx.request.body.admin_graphql_api_id,null);
+    const resp = await fetch(`https://apinode.micloudbiz.com/gateway-api/v1/warehouse/${warehouseReference.cloudbizReference}`,{
+      method:'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'token': token
+      }
+    });
+    const response = await resp.json();
+    if(response != undefined){
+      await deleteLocationRelationship(ctx.request.body.admin_graphql_api_id,null);
+      deleteLocationsStatus = true;
+    }
+
+    return deleteLocationsStatus;
+  }catch(err){
+    console.error(err);
+  }
+};
+
+/****************************************/
+/*********      DESCUENTOS      *********/
+/****************************************/
+
+const createDiscount = async (token,shopifyDiscountId,discountName,discountRate) => {
+  try{
+    var createDiscountStatus = false;
+    const discountData = {
+      "name": discountName,
+      "rate": discountRate
+    };
+    const resp = await fetch('https://api.micloudbiz.com/v1/discount',{
+      method:'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'token': token
+      },
+      body: JSON.stringify(discountData)
+    });
+    const response = await resp.json();
+    if(response.id != undefined){
+      const saved = await insertDiscountRelationship(shopifyDiscountId,response.id);
+      if(saved){
+        createDiscountStatus = true;
+      }
+    }
+    return createDiscountStatus;
+  }catch(err){
+    console.error(err);
+  }
+};
+
+const updateDiscount = async (token,shopifyDiscountId,discountName,discountRate) => {
+  try{
+    var status = false;
+    var discountReference = await getDiscountRelationship(shopifyDiscountId,null);
+    const discountData = {
+      "name": discountName,
+      "rate": discountRate
+    };
+    const resp = await fetch(`https://api.micloudbiz.com/v1/discount/${discountReference.cloudbizReference}`,{
+      method:'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'token': token
+      },
+      body: JSON.stringify(discountData)
+    });
+    const response = await resp.json();
+    if(response.id != undefined){
+      status = true;
+    }
+    return status;
+  }catch(err){
+    console.error(err);
+  }
+};
+
+const deleteDiscount = async (token,shopifyDiscountId) => {
+  try{
+    var deleteLocationsStatus = false;
+    var discountReference = await getDiscountRelationship(shopifyDiscountId,null);
+    const resp = await fetch(`https://api.micloudbiz.com/v1/discount/${discountReference.cloudbizReference}`,{
+      method:'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'token': token
+      }
+    });
+    const response = await resp.json();
+    if(response != undefined){
+      await deleteDiscountRelationship(shopifyDiscountId,null);
+      deleteLocationsStatus = true;
+    }
+
+    return deleteLocationsStatus;
+  }catch(err){
+    console.error(err);
+  }
+};
+
 /*Agregar funciones para consulta de datos a cloudbiz*/
 
 const getProductInfoFromCloudbiz = async (token,productID) => {
@@ -806,6 +980,9 @@ const getItemInfoFromCloudbiz = async (token,itemID) => {
   return response;
 };
 
+/***********************************************/
+/*********      DATOS DE CLOUDBIZ      *********/
+/***********************************************/
 //función para uso interno y obtener códigos de las categorías en cloudbiz
 const getCategoriesExistsCodes = async (token) => {
   try{
@@ -868,6 +1045,22 @@ const getAllCloudbizProducts = async (token,countRow) => {
   }
 }
 
+const getAllCloudbizLocations = async(token) => {
+  try{
+    const response = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/warehouse',{
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'token': token
+      }
+    });
+    const data = await response.json();
+    return data;
+  }catch(err){
+      console.log(err);
+  }
+}
+
 module.exports = {
     createCustomer,
     createInvoice,
@@ -877,13 +1070,23 @@ module.exports = {
     updateProduct,
     deleteCustomer,
     getCustomerIdWithEmail,
+    
     getAllCloudbizCustomers,
     getAllCloudbizProducts,
     getAllCloudbizDiscounts,
     getAllCategoryInfoFromCloudbiz,
+    getAllCloudbizLocations,
+
     getProductVariantUnitCost,
     createCategory,
     updateCategory,
     deleteCategory,
-    deleteProduct
+    deleteProduct,
+    getCategoriesExistsCodes,
+    createLocation,
+    updateLocation,
+    deleteLocation,
+    createDiscount,
+    updateDiscount,
+    deleteDiscount
 };

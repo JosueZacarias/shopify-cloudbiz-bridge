@@ -72,6 +72,7 @@ const getAllShopifyProducts = gql`query ($cant: Int, $cursor: String){
 const getAllShopifyCollections = gql`query ($cant: Int, $cursor: String){
   collections(first: $cant, after: $cursor){
     edges{
+      cursor
       node{
         description
         descriptionHtml
@@ -79,6 +80,63 @@ const getAllShopifyCollections = gql`query ($cant: Int, $cursor: String){
         productsCount
         title
         updatedAt
+      }
+    }
+    pageInfo{
+      hasNextPage
+      hasPreviousPage
+    }
+  }
+}`;
+
+const getAllShopifyDiscounts = gql`query ($cant: Int, $cursor: String){
+  automaticDiscountNodes (first: $cant, after: $cursor){
+    edges{
+      cursor
+      node{
+        id
+        automaticDiscount {
+          ... on DiscountAutomaticBasic {
+            status
+            title
+            minimumRequirement{
+              ... on DiscountMinimumSubtotal{
+                greaterThanOrEqualToSubtotal{
+                  amount
+                }
+              }
+              ... on DiscountMinimumQuantity{
+              	greaterThanOrEqualToQuantity
+              }
+            }
+            customerGets{
+              value {
+                ... on DiscountPercentage{
+                  percentage
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    pageInfo{
+      hasNextPage
+      hasPreviousPage
+    }
+  }
+}`;
+
+const getAllShopifyLocations = gql`query ($cant: Int, $cursor: String){
+  locations(first: $cant, after: $cursor){
+    edges{
+      cursor
+      node{
+        id
+        name
+        isActive
+        hasActiveInventory
+        activatable
       }
     }
     pageInfo{
@@ -131,5 +189,7 @@ module.exports = {
   
   getAllShopifyCustomers,
   getAllShopifyProducts,
-  getAllShopifyCollections
+  getAllShopifyCollections,
+  getAllShopifyDiscounts,
+  getAllShopifyLocations
 };

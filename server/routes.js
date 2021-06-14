@@ -19,7 +19,10 @@ const {
   createCategory,
   updateCategory,
   deleteCategory,
-  deleteProduct
+  deleteProduct,
+  createLocation,
+  updateLocation,
+  deleteLocation
 } = require('./apiClient');
 const {
   getProductFirestore,
@@ -264,6 +267,46 @@ customRouter.post('/api/v1/category/deleteCategory',
     }
   }
 );
+
+customRouter.post('/api/v1/customer/createLocation',
+  async (ctx) => {
+    //Consulta servicio para obtener token de acceso a cloudbiz
+    ctx.res.statusCode = 200;
+    const token = await getToken();
+    const location = await createLocation(ctx,token);
+    if(location){
+      console.log('Bodega o Locación creada con éxito');
+    }else{
+      console.error('Error en la creación de bodega o locación');
+    }
+  }
+);
+
+customRouter.post('api/v1/customer/updateLocation',
+  async (ctx) => {
+    ctx.res.statusCode = 200;
+    const token = await getToken();
+    const location = await updateLocation(ctx,token);
+    if(location){
+      console.log('Bodega o Locación actualizada con éxito');
+    }else{
+      console.error('Error en la actualización de bodega o locación');
+    }
+  }
+);
+
+customRouter.post('api/v1/customer/deleteLocation',
+  async (ctx) => {
+    ctx.res.statusCode = 200;
+    const token = await getToken();
+    const location = await deleteLocation(ctx,token);
+    if(location){
+      console.log('Bodega o Locación eliminada con éxito');
+    }else{
+      console.error('Error en la eliminación de bodega o locación');
+    }
+  }
+);
 //EndPoints Terminados Final
 
 //EndPoints Pendientes de Desarrollo Inicio
@@ -315,6 +358,8 @@ customRouter.post('/api/v1/customer/deleteCustomerGroup',
     }
   }
 );
+
+
 
 //EndPoints Pendientes de Desarrollo Fin
 
