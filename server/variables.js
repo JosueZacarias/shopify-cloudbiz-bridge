@@ -74,6 +74,14 @@ const discountAll = async (cant,cursor) => {
   return variables;
 }
 
+const couponDiscountAll = async (cant,cursor) => {
+  const variables = {
+    "cant":cant,
+    "cursor":cursor
+  };
+  return variables;
+}
+
 const locationAll = async (cant,cursor) => {
   const variables = {
     "cant":cant,
@@ -544,5 +552,6 @@ module.exports = {
   productsAll,
   collectionsAll,
   discountAll,
+  couponDiscountAll,
   locationAll
 }

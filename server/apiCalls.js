@@ -17,6 +17,7 @@ const {
   productsAll,
   collectionsAll,
   discountAll,
+  couponDiscountAll,
   locationAll
 } = require('./variables.js');
 const {
@@ -25,7 +26,10 @@ const {
   getAllCloudbizDiscounts,
   getAllCategoryInfoFromCloudbiz,
   getAllCloudbizLocations,
-  getCategoriesExistsCodes
+  getCategoriesExistsCodes,
+  createDiscount,
+  updateDiscount,
+  deleteDiscount
 } = require('./apiClient.js');
 const {
   getToken,
@@ -432,6 +436,10 @@ const verifyDiscountsChangesOnCloudbiz = async() => {
 
     }else if(cloudbizDiscountsCount == shopifyDiscountsCount && cloudbizDiscountsCount == firebaseDiscountsCount){
 
+    }else if(shopifyDiscountsCount > 0 && shopifyDiscountsCount > cloudbizDiscountsCount){
+      shopifyDiscountsCount.map(async discount => {
+
+      });
     }
 
     return status;
@@ -535,6 +543,28 @@ const getShopifyDiscountsArray = async(cant,cursor,variable = null) => {
   try{
     if(variable == null){
       variable = await discountAll(cant,cursor);
+    }
+    var shopifyDiscountQuery = await graphQLClient(getAllShopifyDiscounts,variable);
+    var haveMore = shopifyDiscountQuery.automaticDiscountNodes.pageInfo.hasNextPage;
+    var shopifyDiscount = [...shopifyDiscountQuery.automaticDiscountNodes.edges];
+    if(haveMore){
+      cant += 10;
+      var lastElement = shopifyDiscount.pop();
+      cursor = lastElement.cursor;
+      variable = await discountAll(cant,cursor);
+      var discounts = await getShopifyDiscountsArray(cant,cursor,variable);
+      shopifyDiscount = shopifyDiscount.concat(lastElement,discounts);
+    }
+    return shopifyDiscount;
+  }catch(err){
+    console.error(err);
+  }
+};
+
+const getShopifyCouponDiscountsArray = async(cant,cursor,variable = null) => {
+  try{
+    if(variable == null){
+      variable = await couponDiscountAll(cant,cursor);
     }
     var shopifyDiscountQuery = await graphQLClient(getAllShopifyDiscounts,variable);
     var haveMore = shopifyDiscountQuery.automaticDiscountNodes.pageInfo.hasNextPage;
