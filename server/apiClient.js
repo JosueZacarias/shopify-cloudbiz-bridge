@@ -24,11 +24,11 @@ const {
 
 const {
   getProductVariantByIDQuery
-} = require('./query.js');
+} = require('./graphQL/querys/product');
 
 const {
   productVariantVariableQuery
-} = require('./variables.js')
+} = require('./graphQL/variables/product');
 
 global.Headers = global.Headers || Headers;
 

@@ -1,38 +1,24 @@
-const Router = require('koa-router');
-const axios = require('axios');
-const { verifyRequest } = require('@shopify/koa-shopify-auth');
+const Router = require ('koa-router');
+const axios = require ('axios');
 const customRouter = new Router();
-const {
-  getPDF,
-  getToken,
-  sendEmail,
-  createCustomer,
-  createInvoice,
-  createProduct,
-  updateCustomer,
-  updateProduct,
-  deleteCustomer,
-  getInvoiceWithId,
-  getCustomerIdWithEmail,
-  createCustomerWithParams,
-  callGetClients,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-  deleteProduct,
-  createLocation,
-  updateLocation,
-  deleteLocation
-} = require('./apiClient');
-const {
-  getProductFirestore,
-  getCustomerFirestore,
-  deleteCustomerRelationship,
-} = require('./firestoreQuery.js');
-const {
-  getProductByIDQuery,
-  getInventoryByIDQuery 
-} = require('./query.js');
+const { getPDF, 
+        getToken, 
+        sendEmail, 
+        createCustomer,
+        createProduct, 
+        updateCustomer, 
+        updateProduct, 
+        deleteCustomer, 
+        getInvoiceWithId,
+        createCategory, 
+        updateCategory, 
+        deleteCategory, 
+        deleteProduct, 
+        createLocation, 
+        updateLocation, 
+        deleteLocation }
+= require ('./apiClient');
+const { getProductFirestore, getCustomerFirestore } = require ('./firestoreQuery.js');
 
 //EndPoints Terminados Inicio
 customRouter.get('/api/v1/invoice/getInvoice',
@@ -358,8 +344,6 @@ customRouter.post('/api/v1/customer/deleteCustomerGroup',
     }
   }
 );
-
-
 
 //EndPoints Pendientes de Desarrollo Fin
 

@@ -1,9 +1,9 @@
-const nodemailer = require("nodemailer");
-const dotenv = require("dotenv");
-const axios = require('axios');
-const HTMLToPDF = require('convert-html-to-pdf').default;
+const { createTransport } = require("nodemailer");
+const { config } = require("dotenv");
+const { post, get } = require('axios');
+const HTMLToPDF = require('convert-html-to-pdf');
 const { GraphQLClient } = require('graphql-request');
-const { getCustomerVIPType, insertCustomerVIPType, deleteCustomerVIPType } = require('./firestoreQuery.js');
+const { getCustomerVIPType, insertCustomerVIPType } = require('./firestoreQuery.js');
 
 const verifyCustomerVIPType = async (tag) => {
   try{
@@ -49,8 +49,8 @@ const pad = (number) => {
 //Token para peticiones a CloudBiz
 const getToken = async () => {
   try {
-    dotenv.config();
-      const resp = await axios.post('https://api.micloudbiz.com/v1/auth/login',{
+    config();
+      const resp = await post('https://api.micloudbiz.com/v1/auth/login',{
           "email": process.env.CLOUDBIZ_USER,"password":process.env.CLOUDBIZ_PASSWORD
         },{
           headers: {
@@ -76,7 +76,7 @@ const getPDF = async (htmlContent) => {
 };
 //Cambiar el remitente ya para producción
 const sendEmail = async (subject,mailBody,toAddresses,pdf) => {
-  let transporter = nodemailer.createTransport({
+  let transporter = createTransport({
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
@@ -105,7 +105,7 @@ const sendEmail = async (subject,mailBody,toAddresses,pdf) => {
 //Obtener factura con ID de cloudBiz
 const getInvoiceWithId = async (token,invoiceId) => {
   try{
-    const resp = await axios.get('https://apinode.micloudbiz.com/gateway-api/v1/print/document/invoice/'+invoiceId,{
+    const resp = await get('https://apinode.micloudbiz.com/gateway-api/v1/print/document/invoice/'+invoiceId,{
       headers: {
         'token': token
       }

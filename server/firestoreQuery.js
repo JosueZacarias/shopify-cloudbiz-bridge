@@ -1,4 +1,4 @@
-const {database} = require('./firestoreAuth.js');
+const {  database  } = require('./firestoreAuth.js');
 /*******************************************************/
 /*********      FUNCIONES COMPLEMENTARIAS      *********/
 /*******************************************************/

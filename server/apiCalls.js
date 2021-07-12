@@ -1,35 +1,47 @@
-const {
-  customerVariableMutationCreate,
-  customerVariableMutationDelete,
-  productVariableMutationCreate,
-  productVariableMutationUpdate,
-  productImageVariableMutationCreate,
-  productVariableMutationDelete,
-  productVariantVariableMutationCreate,
-  productVariantVariableMutationUpdate,
-  productVariantVariableMutationDelete,
-  collectionVariableMutationCreate,
-  collectionVariableMutationDelete,
-  productInventoryItemInput,
-  productInventoryQuantitiesInput,
-  createAutomaticBasicDiscount,
-  customersAll,
-  productsAll,
-  collectionsAll,
-  discountAll,
-  couponDiscountAll,
-  locationAll
-} = require('./variables.js');
+const {  collectionsAll,
+          collectionVariableMutationCreate,
+          collectionVariableMutationDelete } 
+= require('./graphQL/variables/collection.js');
+const {  customersAll,
+          customerVariableMutationCreate,
+          customerVariableMutationDelete }
+= require('./graphQL/variables/customer.js');
+const {  discountAll, 
+          couponDiscountAll, 
+          createAutomaticBasicDiscount } 
+= require ('./graphQL/variables/discount');
+const { locationAll } = require('./graphQL/variables/location');
+const {  productsAll, 
+          productVariableMutationCreate,
+          productVariableMutationUpdate,
+          productImageVariableMutationCreate,
+          productVariantVariableMutationCreate,
+          productInventoryItemInput,
+          productInventoryQuantitiesInput } 
+= require('./graphQL/variables/product');
+
+const {  collectionCreate,
+          collectionUpdate,
+          collectionDelete  } 
+= require('./graphQL/mutations/collection');
+const {  customerCreate,
+          customerUpdate,
+          customerDelete  } = require('./graphQL/mutations/customer');
+const {  discountCreate  } = require('./graphQL/mutations/discount');
+const {  productCreateMutation,
+          productVariantCreate  } 
+= require('./graphQL/mutations/product');
+const {  getAllShopifyCollections  } = require('./graphQL/querys/collection');
+const {  getAllShopifyCustomers  } = require('./graphQL/querys/customer');
+const {  getAllShopifyDiscounts  } = require('./graphQL/querys/discount');
+const {  getAllShopifyLocations  } = require('./graphQL/querys/location');
+const {  getAllShopifyProducts } = require('./graphQL/querys/product');
 const {
   getAllCloudbizCustomers,
   getAllCloudbizProducts,
   getAllCloudbizDiscounts,
   getAllCategoryInfoFromCloudbiz,
-  getAllCloudbizLocations,
-  getCategoriesExistsCodes,
-  createDiscount,
-  updateDiscount,
-  deleteDiscount
+  getCategoriesExistsCodes
 } = require('./apiClient.js');
 const {
   getToken,
@@ -39,53 +51,19 @@ const {
 const {
   insertCustomerRelationship,
   insertProductRelationship,
-  insertCustomerVIPTypeRelationship,
   insertCollectionRelationship,
-  getCustomerVIPTypeRelationship,
   getCollectionRelationship,
   getCustomerRelationship,
   getProductRelationship,
-  deleteCustomerRelationship,
-  deleteProductRelationship,
-  deleteCustomerVIPTypeRelationship,
   deleteCollectionRelationship,
   getAllFirestoreCustomers,
   getCollectionDataFromFireStore,
   insertLastCollectionSubId,
   getLastCollectionSubId,
   getDiscountRelationship,
-  insertDiscountRelationship,
-  deleteDiscountRelationship,
   getLocationRelationship,
 } = require('./firestoreQuery.js');
 
-const {
-  customerCreate,
-  customerUpdate,
-  customerDelete,
-  productCreateMutation,
-  productUpdateMutation,
-  productDeleteMutation,
-  productMediaCreate,
-  productVariantCreate,
-  productVariantUpdate,
-  productVariantDelete,
-  collectionCreate,
-  collectionUpdate,
-  collectionDelete,
-  discountCreate,
-  discountUpdate,
-  discountDelete
-} = require('./mutations.js');
-
-const {
-  getProductVariantByIDQuery,
-  getAllShopifyCustomers,
-  getAllShopifyProducts,
-  getAllShopifyCollections,
-  getAllShopifyDiscounts,
-  getAllShopifyLocations
-} = require('./query.js');
 
 const verifyCustomersChangesOnCloudbiz = async () => {
   try{
