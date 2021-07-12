@@ -20,10 +20,10 @@ const {  productsAll,
           productInventoryQuantitiesInput } 
 = require('./graphQL/variables/product');
 
-const {  collectionCreate,
-          collectionUpdate,
-          collectionDelete  } 
-= require('./graphQL/mutations/collection');
+const { collectionCreate,
+        collectionUpdate,
+        collectionDelete  } 
+= require('./graphQL/mutations/collection.js');
 const {  customerCreate,
           customerUpdate,
           customerDelete  } = require('./graphQL/mutations/customer');

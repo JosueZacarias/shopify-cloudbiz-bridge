@@ -1,15 +1,18 @@
 const Router = require ('koa-router');
 const axios = require ('axios');
 const customRouter = new Router();
-const { getPDF, 
-        getToken, 
-        sendEmail, 
+const {
+  getPDF, 
+  getToken, 
+  sendEmail,
+  getInvoiceWithId
+} = require('./appFunctions.js');
+const { 
         createCustomer,
         createProduct, 
         updateCustomer, 
         updateProduct, 
-        deleteCustomer, 
-        getInvoiceWithId,
+        deleteCustomer,
         createCategory, 
         updateCategory, 
         deleteCategory, 
@@ -17,7 +20,7 @@ const { getPDF,
         createLocation, 
         updateLocation, 
         deleteLocation }
-= require ('./apiClient');
+= require('./apiClient');
 const { getProductFirestore, getCustomerFirestore } = require ('./firestoreQuery.js');
 
 //EndPoints Terminados Inicio
