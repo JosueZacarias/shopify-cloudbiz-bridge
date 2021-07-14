@@ -2,20 +2,20 @@ const Router = require('koa-router');
 const axios = require('axios');
 const { verifyRequest } = require('@shopify/koa-shopify-auth');
 const customRouter = new Router();
-const {
+const {  
   getPDF,
   getToken,
   sendEmail,
+  getInvoiceWithId
+} = require('./appFunctions');
+const {
   createCustomer,
   createInvoice,
   createProduct,
   updateCustomer,
   updateProduct,
   deleteCustomer,
-  getInvoiceWithId,
   getCustomerIdWithEmail,
-  createCustomerWithParams,
-  callGetClients,
   createCategory,
   updateCategory,
   deleteCategory,
@@ -25,14 +25,10 @@ const {
   deleteLocation
 } = require('./apiClient');
 const {
-  getProductFirestore,
-  getCustomerFirestore,
+  getCustomerRelationship,
+  getProductRelationship,
   deleteCustomerRelationship,
 } = require('./firestoreQuery.js');
-const {
-  getProductByIDQuery,
-  getInventoryByIDQuery 
-} = require('./query.js');
 
 //EndPoints Terminados Inicio
 customRouter.get('/api/v1/invoice/getInvoice',
@@ -107,7 +103,7 @@ customRouter.post('/api/v1/invoice/createInvoice',
     const subject = 'Factura generado para el cliente: ';
     const emailBody = '<p><b>Su factura ha sido creado</b></p>';
     const shopifyCustomerID = ctx.request.body.customer.admin_graphql_api_id;
-    const customerReference = await getCustomerFirestore(shopifyCustomerID,null);
+    const customerReference = await getCustomerRelationship(shopifyCustomerID,null);
     var contactID = '22996';//Contacto consumidor final
     if(customerReference){
       contactID = customerReference.cloudbizReference.toString();
@@ -119,7 +115,7 @@ customRouter.post('/api/v1/invoice/createInvoice',
     var items = [];
     ctx.request.body.line_items.forEach(async(item, i) => {
       let admin_graphql_api_id = "gid://shopify/ProductVariant/"+item.variant_id;
-      const productInfo = await getProductFirestore(null,admin_graphql_api_id,null);
+      const productInfo = await getProductRelationship(null,admin_graphql_api_id,null);
       items.push({
         "item_id": productInfo.cloudbizReference,
         "name": item.name,

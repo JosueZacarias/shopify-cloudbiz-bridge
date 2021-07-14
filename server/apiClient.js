@@ -19,6 +19,8 @@ const {
   deleteLocationRelationship,
   getDiscountRelationship,
   deleteDiscountRelationship,
+
+  insertDiscountRelationship
   
 } = require('./firestoreQuery.js');
 
@@ -28,7 +30,9 @@ const {
 
 const {
   productVariantVariableQuery
-} = require('./variables.js')
+} = require('./variables.js');
+
+const { graphQLClient } = require('./appFunctions');
 
 global.Headers = global.Headers || Headers;
 
@@ -161,7 +165,7 @@ const deleteCustomer = async (ctx,token) => {
   try{
     var deletedCustomerStatus = false;
     const shopifyCustomerID = ctx.request.body.admin_graphql_api_id;
-    const customerReference = await getCustomerFirestore(shopifyCustomerID,null);
+    const customerReference = await getCustomerRelationship(shopifyCustomerID,null);
     const contactID = customerReference.cloudbizReference;
     const response = await fetch('https://api.micloudbiz.com/v1/contact/'+contactID,{
       method: 'DELETE',
@@ -441,7 +445,7 @@ const createProduct = async (ctx,token) => {
 const updateProduct = async (ctx,token) => {
   try{
     //variantes quitados
-    const productSavedDocs = await getProductFirestore(ctx.request.body.admin_graphql_api_id,null,null);
+    const productSavedDocs = await getProductRelationship(ctx.request.body.admin_graphql_api_id,null,null);
     var productSavedCopy = productSavedDocs;
     const productVariants = ctx.request.body.variants;
     let docCount = productSavedDocs.length;
@@ -489,7 +493,7 @@ const updateProduct = async (ctx,token) => {
         variantTitle = variantTitle+" - "+item.title;
         reference =  item.title;
       }
-      let itemDoc = await getProductFirestore(null,item.admin_graphql_api_id,null);
+      let itemDoc = await getProductRelationship(null,item.admin_graphql_api_id,null);
       let itemID = itemDoc[0].data();
       var shopifyProductInfo = await getProductInfoFromCloudbiz(token,itemID.cloudbizReference);
       var categoryId = shopifyProductInfo.category_id;
