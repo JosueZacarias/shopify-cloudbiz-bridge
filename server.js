@@ -9,8 +9,11 @@ const { default: createShopifyAuth } = require('@shopify/koa-shopify-auth');
 const { verifyRequest } = require('@shopify/koa-shopify-auth');
 const { default: Shopify, ApiVersion } = require('@shopify/shopify-api');
 const Router = require('koa-router');
-const { verifyProductsChangesOnCloudbiz } = require('./server/apiCalls.js');
-//const { setQueryMutationAuth } = require('./server/apiClient.js');
+const { 
+  verifyCustomersChangesOnCloudbiz,
+  verifyCollectionsChangesOnCloudbiz, 
+  verifyProductsChangesOnCloudbiz 
+} = require('./server/api/verifyOnChanges');
 dotenv.config();
 const { SHOPIFY_API_SECRET_KEY, SHOPIFY_API_KEY } = process.env;
 //process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
@@ -32,7 +35,7 @@ const handle = app.getRequestHandler();
 const ACTIVE_SHOPIFY_SHOPS = {};
 app.prepare().then(() => {
   const session = require("koa-session");
-  const { customRouter } = require('./server/routes.js');
+  const { customRouter } = require('./server/routes/routes');
   const router = new Router();
   const server = new Koa();
   server.use(session({ secure: true},server));
@@ -125,7 +128,7 @@ app.prepare().then(() => {
       //   setInterval(async function(){
       //     var result = await verifyProductsChangesOnCloudbiz();
       //     console.log(result);
-      //   },10000);
+      //   },1000);
       // }
       // catch(err){
       //   console.log(err);

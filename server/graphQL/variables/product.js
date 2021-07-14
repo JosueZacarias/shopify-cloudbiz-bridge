@@ -131,8 +131,6 @@ const productVariantVariableMutationUpdate = async ( productId,
                                                     compareAtPrice,
                                                     imageSrc,
                                                     inventoryItem,
-                                                    status = "ACTIVE",
-                                                    inventoryItemInput,
                                                     id) => {
   let input = {
     "input":{
@@ -148,8 +146,7 @@ const productVariantVariableMutationUpdate = async ( productId,
       "inventoryItem":inventoryItem,
       "inventoryManagement": "SHOPIFY",
       "inventoryPolicy": "DENY",
-      "status": status,
-      "InventoryItemInput": inventoryItemInput
+      "status": "ACTIVE"
     }
   }
   return input;

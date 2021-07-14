@@ -6,47 +6,25 @@ const {
   getToken, 
   sendEmail,
   getInvoiceWithId
-} = require('./appFunctions.js');
+} = require('../functions/appFunctions');
 const { 
-        createCustomer,
-        createProduct, 
-        updateCustomer, 
-        updateProduct, 
-        deleteCustomer,
-        createCategory, 
-        updateCategory, 
-        deleteCategory, 
-        deleteProduct, 
-        createLocation, 
-        updateLocation, 
-        deleteLocation }
-= require('./apiClient');
-const { getProductFirestore, getCustomerFirestore } = require ('./firestoreQuery.js');
+  createCustomer,
+  createProduct, 
+  updateCustomer, 
+  updateProduct, 
+  deleteCustomer,
+  createCategory, 
+  updateCategory, 
+  deleteCategory, 
+  deleteProduct, 
+  createLocation, 
+  updateLocation, 
+  deleteLocation }
+= require('../api/cloudbizCall');
+const { getCustomerRelationship } = require ('../firestore/customer');
+const { getProductRelationship } = require ('../firestore/product');
 
 //EndPoints Terminados Inicio
-customRouter.get('/api/v1/invoice/getInvoice',
-  async (ctx) => {
-    ctx.response.statusCode = 200;
-    var id_invoice = 425356;
-    const emailSubject = 'Su factura ha sido generado';
-    const emailBody = '<p>Muchas Gracias por su compra</p>';
-    var emailSend = 'jeffryj.zacarias@gmail.com';
-    const token = await getToken();
-    const invoice = await getInvoiceWithId(token,id_invoice);
-    if(invoice){
-      let invoicePDF = await getPDF(invoice);
-      let emailSendStatus = await sendEmail(emailSubject,emailBody,emailSend,invoicePDF);
-      if(emailSendStatus){
-        console.log('Factura recibida correctamente');
-      }else{
-        console.log('Error al intentar enviar factura por correo');
-      }
-    }else{
-      console.log('Error al obtener la factura');
-    }
-  }
-);
-
 customRouter.post('/api/v1/customer/createCustomer',
   async (ctx) => {
     //Consulta servicio para obtener token de acceso a cloudbiz
@@ -54,7 +32,7 @@ customRouter.post('/api/v1/customer/createCustomer',
     const token = await getToken();
     const customer = await createCustomer(ctx,token);
     if(customer){
-      console.log('Contacto creado con éxito con id: '+ customer.id);
+      console.log('Contacto creado con éxito!!');
     }else{
       console.log('Error en la creación de contacto');
     }
@@ -96,7 +74,7 @@ customRouter.post('/api/v1/invoice/createInvoice',
     const subject = 'Factura generado para el cliente: ';
     const emailBody = '<p><b>Su factura ha sido creado</b></p>';
     const shopifyCustomerID = ctx.request.body.customer.admin_graphql_api_id;
-    const customerReference = await getCustomerFirestore(shopifyCustomerID,null);
+    const customerReference = await getCustomerRelationship(shopifyCustomerID,null);
     var contactID = '22996';//Contacto consumidor final
     if(customerReference){
       contactID = customerReference.cloudbizReference.toString();
@@ -108,7 +86,7 @@ customRouter.post('/api/v1/invoice/createInvoice',
     var items = [];
     ctx.request.body.line_items.forEach(async(item, i) => {
       let admin_graphql_api_id = "gid://shopify/ProductVariant/"+item.variant_id;
-      const productInfo = await getProductFirestore(null,admin_graphql_api_id,null);
+      const productInfo = await getProductRelationship(null,admin_graphql_api_id,null);
       items.push({
         "item_id": productInfo.cloudbizReference,
         "name": item.name,

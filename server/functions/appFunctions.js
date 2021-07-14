@@ -3,7 +3,7 @@ const { config } = require("dotenv");
 const { post, get } = require('axios');
 const HTMLToPDF = require('convert-html-to-pdf');
 const { GraphQLClient } = require('graphql-request');
-const { getCustomerVIPType, insertCustomerVIPType } = require('./firestoreQuery.js');
+const { getCustomerVIPType, insertCustomerVIPType } = require('../firestore/customer');
 
 const verifyCustomerVIPType = async (tag) => {
   try{

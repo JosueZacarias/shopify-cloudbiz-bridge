@@ -2,33 +2,45 @@ const axios = require('axios');
 const fetch = require('node-fetch');
 const { Headers } = require('cross-fetch');
 const {
-  getProductRelationship,
-  getCustomerRelationship,
-  insertProductRelationship,
-  insertCustomerRelationship,
-  insertLastCollectionSubId,
-  deleteProductRelationship,
-  deleteCustomerRelationship,
-  getLastCollectionSubId,
+  graphQLClient
+} = require('../functions/appFunctions');
+const {
   insertCollectionRelationship,
   deleteCollectionRelationship,
   getCollectionRelationship,
-
-  getLocationRelationship,
-  insertLocationRelationship,
-  deleteLocationRelationship,
+  
+} = require('../firestore/collection');
+const {
+  getLastCollectionSubId,
+  insertLastCollectionSubId
+} = require('../firestore/complements');
+const {
+  getCustomerRelationship,
+  insertCustomerRelationship,
+  deleteCustomerRelationship,
+} = require('../firestore/customer');
+const {
   getDiscountRelationship,
   deleteDiscountRelationship,
-  
-} = require('./firestoreQuery.js');
+} = require('../firestore/discount');
+const {
+  getLocationRelationship,
+  insertLocationRelationship,
+  deleteLocationRelationship
+} = require('../firestore/location');
+const {
+  getProductRelationship,
+  insertProductRelationship,
+  deleteProductRelationship,
+} = require('../firestore/product');
 
 const {
   getProductVariantByIDQuery
-} = require('./graphQL/querys/product');
+} = require('../graphQL/querys/product');
 
 const {
   productVariantVariableQuery
-} = require('./graphQL/variables/product');
+} = require('../graphQL/variables/product');
 
 global.Headers = global.Headers || Headers;
 
