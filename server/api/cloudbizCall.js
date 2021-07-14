@@ -22,6 +22,7 @@ const {
 const {
   getDiscountRelationship,
   deleteDiscountRelationship,
+  insertDiscountRelationship
 } = require('../firestore/discount');
 const {
   getLocationRelationship,
@@ -453,7 +454,7 @@ const createProduct = async (ctx,token) => {
 const updateProduct = async (ctx,token) => {
   try{
     //variantes quitados
-    const productSavedDocs = await getProductFirestore(ctx.request.body.admin_graphql_api_id,null,null);
+    const productSavedDocs = await getProductRelationship(ctx.request.body.admin_graphql_api_id,null,null);
     var productSavedCopy = productSavedDocs;
     const productVariants = ctx.request.body.variants;
     let docCount = productSavedDocs.length;

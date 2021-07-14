@@ -188,7 +188,7 @@ const getCloudbizCustomersArray = async (token,cant = 1) => {
     var getCustomers = await getAllCloudbizCustomers(token,cant);
     var customerCount = getCustomers.pop().rows;
     if(customerCount > cant){
-      getCustomers = await getAllCloudbizCustomers(token,4);
+      getCustomers = await getAllCloudbizCustomers(token,cant);
       getCustomers.pop();
       cloudbizCustomers = [...getCustomers];
       cloudbizCustomers = cloudbizCustomers.map((item) => {
@@ -222,7 +222,7 @@ const getCloudbizProductsArray = async(token,cant = 1) => {
     var getProducts = await getAllCloudbizProducts(token,cant);
     var productsCount = getProducts.pop().rows;
     if(productsCount > cant){
-      getProducts = await getAllCloudbizProducts(token,4);
+      getProducts = await getAllCloudbizProducts(token,cant);
       getProducts.pop();
       getProducts = [...getProducts];
       products = getProducts.map((item) => {
