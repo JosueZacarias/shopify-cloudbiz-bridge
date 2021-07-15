@@ -92,11 +92,37 @@ const sendEmail = async (subject,mailBody,toAddresses,pdf) => {
     });
   let attachments = { filename: "factura.pdf", content: pdf }
   const mailOptions = {
-    from: "INVERSIONES ZACARÍAS <josuej.zacariasg@gmail.com>",
+    from: `CUBIC <${process.env.MAIL_USERNAME}>`,
     to: toAddresses,
     subject: subject,
     html:mailBody,
     attachments
+  };
+
+  let mail = await transporter.sendMail(mailOptions);
+  return mail.messageId;
+};
+
+const sendEmailToDev = async (subject,mailBody,toAddresses) => {
+  let transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        type: 'OAuth2',
+        user: process.env.MAIL_USERNAME,
+        clientId: process.env.OAUTH_CLIENT_ID,
+        clientSecret: process.env.OAUTH_CLIENT_SECRET,
+        refreshToken: process.env.OAUTH_REFRESH_TOKEN,
+        accessToken: process.env.ACCESS_TOKEN,
+        expires: 1484314697598
+      }
+    });
+  const mailOptions = {
+    from: `CUBIC <${process.env.MAIL_USERNAME}>`,
+    to: toAddresses,
+    subject: subject,
+    html:mailBody
   };
 
   let mail = await transporter.sendMail(mailOptions);
@@ -135,6 +161,7 @@ module.exports = {
   getPDF,
   getToken,
   sendEmail,
+  sendEmailToDev,
   getInvoiceWithId,
   graphQLClient,
   verifyCustomerVIPType,
