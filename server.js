@@ -87,45 +87,6 @@ app.prepare().then(() => {
     ctx.res.statusCode = 200;
   };
 
-  router.get("/install-app", async (ctx) => {
-    ctx.res.statusCode = 200;
-    let {shop} = {...ctx.query};
-    if (ACTIVE_SHOPIFY_SHOPS[shop] === undefined) {
-      const redirect_uri = `${process.env.SHOPIFY_APP_URL}/generate-token`;
-      const api_key = process.env.SHOPIFY_API_KEY;
-      const scopes = process.env.SHOPIFY_API_SCOPES;
-      const nonce = Shopify.Utils.nonce();
-      let url = `https://${shop}/admin/oauth/request_grant?client_id=${api_key}&scope=${scopes}&redirect_uri=${redirect_uri}&state=${nonce}&grant_options[]=`;
-      ctx.redirect(url);
-    } else {
-      await handleRequest(ctx);
-    }
-  });
-
-  router.get("/generate-token",async (ctx) => {
-    ctx.res.statusCode = 200;
-    const {code,shop,scope} = {...ctx.query};
-    let data = {
-      client_id: process.env.SHOPIFY_API_KEY,
-      client_secret: process.env.SHOPIFY_API_SECRET_KEY,
-      code
-    }
-    const AccessTokenUrl = `https://${shop}/admin/oauth/access_token`; 
-    if(Shopify.Utils.validateHmac(ctx.query)){
-      let token = await axios.post(AccessTokenUrl,data).then(async response => {
-        return await response.data;
-      }).catch(error => console.log(error));
-      let content = `<div>
-        <p>Token: <b>${token.access_token}</b></p>
-      </div>`;
-      let accessToken = token.access_token;
-      let response = await sendEmailToDev('SHOPIFY ACCESS TOKEN',content,'jeffryj.zacarias@gmail.com');
-
-    }else{
-      console.log('Error solicitud no valida para instalacion');
-    }
-  })
-
   router.get("/", async (ctx) => {
     const shop = ctx.query.shop;
     // This shop hasn't been seen yet, go through OAuth to create a session

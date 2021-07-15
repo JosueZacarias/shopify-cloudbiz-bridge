@@ -397,7 +397,7 @@ const createProduct = async (ctx,token) => {
         "conversion_rate": 1,
         "prices": [
             {
-                "id": "1084",
+                "id": "1325",
                 "price": item.price,
                 "with_tax": !item.taxable
             }
@@ -405,12 +405,12 @@ const createProduct = async (ctx,token) => {
         "is_tax_exempt": 0,
         "taxes": [
             {
-                "id": 55
+                "id": 1125
             }
         ],
         "image": imageURL,
         "inventory": {
-            "unit_id": "27",
+            "unit_id": "1322",
             "cost_price": cost_price,
             "warehouses": [
                 {
@@ -556,7 +556,7 @@ const deleteProduct = async (ctx,token) => {
     const productSavedDocs = await getProductRelationship(productID,null,null);
     productSavedDocs.forEach(async(item, i) => {
       var dataDoc = item.data();
-      var response = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/item/'+dataDoc.cloudbizReference,{
+      var response = await fetch(`https://apinode.micloudbiz.com/gateway-api/v1/item/${dataDoc.cloudbizReference}`,{
         method: 'DELETE',
         headers: {
           'Content-Type' : 'application/json',
