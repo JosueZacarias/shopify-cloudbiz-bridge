@@ -1,2 +1,3 @@
+.env.test
 .next
 node_modules
