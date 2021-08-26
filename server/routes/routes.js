@@ -1,59 +1,30 @@
-const Router = require('koa-router');
-const axios = require('axios');
-const { verifyRequest } = require('@shopify/koa-shopify-auth');
+const Router = require ('koa-router');
+const axios = require ('axios');
 const customRouter = new Router();
-const {  
-  getPDF,
-  getToken,
+const {
+  getPDF, 
+  getToken, 
   sendEmail,
   getInvoiceWithId
-} = require('./appFunctions');
-const {
+} = require('../functions/appFunctions');
+const { 
   createCustomer,
-  createInvoice,
-  createProduct,
-  updateCustomer,
-  updateProduct,
+  createProduct, 
+  updateCustomer, 
+  updateProduct, 
   deleteCustomer,
-  getCustomerIdWithEmail,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-  deleteProduct,
-  createLocation,
-  updateLocation,
-  deleteLocation
-} = require('./apiClient');
-const {
-  getCustomerRelationship,
-  getProductRelationship,
-  deleteCustomerRelationship,
-} = require('./firestoreQuery.js');
+  createCategory, 
+  updateCategory, 
+  deleteCategory, 
+  deleteProduct, 
+  createLocation, 
+  updateLocation, 
+  deleteLocation }
+= require('../api/cloudbizCall');
+const { getCustomerRelationship } = require ('../firestore/customer');
+const { getProductRelationship } = require ('../firestore/product');
 
 //EndPoints Terminados Inicio
-customRouter.get('/api/v1/invoice/getInvoice',
-  async (ctx) => {
-    ctx.response.statusCode = 200;
-    var id_invoice = 425356;
-    const emailSubject = 'Su factura ha sido generado';
-    const emailBody = '<p>Muchas Gracias por su compra</p>';
-    var emailSend = 'jeffryj.zacarias@gmail.com';
-    const token = await getToken();
-    const invoice = await getInvoiceWithId(token,id_invoice);
-    if(invoice){
-      let invoicePDF = await getPDF(invoice);
-      let emailSendStatus = await sendEmail(emailSubject,emailBody,emailSend,invoicePDF);
-      if(emailSendStatus){
-        console.log('Factura recibida correctamente');
-      }else{
-        console.log('Error al intentar enviar factura por correo');
-      }
-    }else{
-      console.log('Error al obtener la factura');
-    }
-  }
-);
-
 customRouter.post('/api/v1/customer/createCustomer',
   async (ctx) => {
     //Consulta servicio para obtener token de acceso a cloudbiz
@@ -61,7 +32,7 @@ customRouter.post('/api/v1/customer/createCustomer',
     const token = await getToken();
     const customer = await createCustomer(ctx,token);
     if(customer){
-      console.log('Contacto creado con éxito');
+      console.log('Contacto creado con éxito!!');
     }else{
       console.log('Error en la creación de contacto');
     }
@@ -97,7 +68,7 @@ customRouter.post('/api/v1/customer/deleteCustomer',
 
 customRouter.post('/api/v1/invoice/createInvoice',
   async (ctx) => {
-    ctx.res.statusCode = 200;
+    ctx.status = 200;
     const token = await getToken();
     const email = ctx.request.body.email;
     const subject = 'Factura generado para el cliente: ';
@@ -278,7 +249,7 @@ customRouter.post('/api/v1/customer/createLocation',
   }
 );
 
-customRouter.post('/api/v1/customer/updateLocation',
+customRouter.post('api/v1/customer/updateLocation',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -291,7 +262,7 @@ customRouter.post('/api/v1/customer/updateLocation',
   }
 );
 
-customRouter.post('/api/v1/customer/deleteLocation',
+customRouter.post('api/v1/customer/deleteLocation',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -354,8 +325,6 @@ customRouter.post('/api/v1/customer/deleteCustomerGroup',
     }
   }
 );
-
-
 
 //EndPoints Pendientes de Desarrollo Fin
 

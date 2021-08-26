@@ -7,11 +7,13 @@ const json = require('koa-json');
 const cors = require('@koa/cors');
 const { default: createShopifyAuth } = require('@shopify/koa-shopify-auth');
 const { verifyRequest } = require('@shopify/koa-shopify-auth');
-const { default: Shopify, ApiVersion, AuthQuery } = require('@shopify/shopify-api');
+const { default: Shopify, ApiVersion } = require('@shopify/shopify-api');
 const Router = require('koa-router');
-const { updateDataFromCloudbiz } = require('./server/apiCalls.js');
-const { sendEmailToDev } = require('./server/appFunctions');
-//const { setQueryMutationAuth } = require('./server/apiClient.js');
+const { 
+  verifyCustomersChangesOnCloudbiz,
+  verifyCollectionsChangesOnCloudbiz, 
+  verifyProductsChangesOnCloudbiz 
+} = require('./server/api/verifyOnChanges');
 dotenv.config();
 const { SHOPIFY_API_SECRET_KEY, SHOPIFY_API_KEY } = process.env;
 //process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
@@ -21,7 +23,7 @@ Shopify.Context.initialize({
   API_SECRET_KEY: SHOPIFY_API_SECRET_KEY,
   SCOPES: process.env.SHOPIFY_API_SCOPES.split(","),
   HOST_NAME: process.env.SHOPIFY_APP_URL.replace(/https:\/\//, ""),
-  API_VERSION: ApiVersion.April21,
+  API_VERSION: ApiVersion.October20,
   IS_EMBEDDED_APP: true,
   SESSION_STORAGE: new Shopify.Session.MemorySessionStorage(),
 });
@@ -33,7 +35,7 @@ const handle = app.getRequestHandler();
 const ACTIVE_SHOPIFY_SHOPS = {};
 app.prepare().then(() => {
   const session = require("koa-session");
-  const { customRouter } = require('./server/routes.js');
+  const { customRouter } = require('./server/routes/routes');
   const router = new Router();
   const server = new Koa();
   server.use(session({ secure: true},server));
@@ -45,11 +47,11 @@ app.prepare().then(() => {
 
   server.use(
     createShopifyAuth({
-      accessMode: 'offline',
       async afterAuth(ctx) {
         // Access token and shop available in ctx.state.shopify
         const { shop, accessToken, scope } = ctx.state.shopify;
         ACTIVE_SHOPIFY_SHOPS[shop] = scope;
+
         const response = await Shopify.Webhooks.Registry.register({
           shop,
           accessToken,
@@ -65,18 +67,9 @@ app.prepare().then(() => {
           );
         }
 
-        let content = `
-          <div>
-            <p>Token: <b>${accessToken}</b></p>
-          </div>
-        `;
-        let send = await sendEmailToDev('SHOPIFY ACCESS TOKEN',content,'jeffryj.zacarias@gmail.com');
-        if(send){
-          console.log('Token generado y enviando con exito!!');
-        }
-
         // Redirect to app with shop parameter upon auth
         ctx.redirect(`/?shop=${shop}`);
+        //ctx.redirect(`/`);
       },
     })
   );
@@ -89,8 +82,10 @@ app.prepare().then(() => {
 
   router.get("/", async (ctx) => {
     const shop = ctx.query.shop;
+
     // This shop hasn't been seen yet, go through OAuth to create a session
     if (ACTIVE_SHOPIFY_SHOPS[shop] === undefined) {
+      //ctx.redirect(`/auth?shop=${shop}`);
       ctx.redirect(`/auth?shop=${shop}`);
     } else {
       await handleRequest(ctx);
@@ -106,7 +101,8 @@ app.prepare().then(() => {
     }
   });
 
-  router.post("/graphql",
+  router.post(
+    "/graphql",
     verifyRequest({ returnHeader: true }),
     async (ctx, next) => {
       await Shopify.Utils.graphqlProxy(ctx.req, ctx.res);
@@ -128,15 +124,14 @@ app.prepare().then(() => {
 
   server.listen(port, () => {
     console.log(`> Ready on http://localhost:${port}`);
-      try{
-        const mseg = 180000;
-        const runRequest = async () => {
-          await updateDataFromCloudbiz();
-        }
-        setInterval(() => runRequest() ,mseg);
-      }
-      catch(err){
-        console.log(err);
-      }
+      // try{
+      //   setInterval(async function(){
+      //     var result = await verifyProductsChangesOnCloudbiz();
+      //     console.log(result);
+      //   },1000);
+      // }
+      // catch(err){
+      //   console.log(err);
+      // }
   });
 });
