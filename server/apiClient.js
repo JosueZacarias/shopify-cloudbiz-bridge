@@ -25,19 +25,14 @@ const {
 } = require('./firestoreQuery.js');
 
 const {
-  getProductVariantByIDQuery,
-  getProductsLocations,
-  getProductsCollections
+  getProductVariantByIDQuery
 } = require('./query.js');
 
 const {
-  productVariantVariableQuery,
-  productLocation,
-  productCollection
+  productVariantVariableQuery
 } = require('./variables.js');
 
-const { graphQLClient, imageResize } = require('./appFunctions');
-const { productCreateMutation } = require('./mutations.js');
+const { graphQLClient } = require('./appFunctions');
 
 global.Headers = global.Headers || Headers;
 
@@ -69,47 +64,42 @@ const createCustomer = async (ctx,token) => {
   var phone_1 = '';
   var createCustomerStatus = false;
   try{
-    const exists = await getCustomerRelationship(ctx.request.body.admin_graphql_api_id,null);
-    if(exists === undefined){
-      if(ctx.request.body.addresses.length > 0){
-        city = ctx.request.body.addresses[0]['city'];
-        address = ctx.request.body.addresses[0]['address1'];
-        phone_1 = ctx.request.body.addresses[0]['phone'];
-      };
-      var customerData = {
-        is_active : 1,
-        seller_id: null,
-        discount_id: null,
-        is_tax_exempt: (ctx.request.body.tax_exempt)?1:0,
-        is_client: 1,
-        is_vendor: 0,
-        balance_in_favor: 0,
-        full_name: ctx.request.body.first_name+' '+ ctx.request.body.last_name,
-        tax_number: '',
-        email: ctx.request.body.email,
-        city: city,
-        address: address,
-        phone_1: phone_1,
-        phone_2: null,
-        mobile_phone: ctx.request.body.phone,
-        notes: ctx.request.body.note,
-        persons: []
-      };
-      const resp = await fetch('https://api.micloudbiz.com/v1/contact',{
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'token': token
-          },
-          body:JSON.stringify(customerData)
-        }
-      );
-      const response = await resp.json();
-      if(response){
-        await insertCustomerRelationship(ctx.request.body.admin_graphql_api_id,response.id);
-        createCustomerStatus = true;
+    if(ctx.request.body.addresses.length > 0){
+      city = ctx.request.body.addresses[0]['city'];
+      address = ctx.request.body.addresses[0]['address1'];
+      phone_1 = ctx.request.body.addresses[0]['phone'];
+    };
+    var customerData = {
+      is_active : 1,
+      seller_id: null,
+      discount_id: null,
+      is_tax_exempt: (ctx.request.body.tax_exempt)?1:0,
+      is_client: 1,
+      is_vendor: 0,
+      balance_in_favor: 0,
+      full_name: ctx.request.body.first_name+' '+ ctx.request.body.last_name,
+      tax_number: '',
+      email: ctx.request.body.email,
+      city: city,
+      address: address,
+      phone_1: phone_1,
+      phone_2: null,
+      mobile_phone: ctx.request.body.phone,
+      notes: ctx.request.body.note,
+      persons: []
+    };
+    const resp = await fetch('https://api.micloudbiz.com/v1/contact',{
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': token
+        },
+        body:JSON.stringify(customerData)
       }
-    }else{
+    );
+    const response = await resp.json();
+    if(response){
+      await insertCustomerRelationship(ctx.request.body.admin_graphql_api_id,response.id);
       createCustomerStatus = true;
     }
     return createCustomerStatus;
@@ -375,17 +365,77 @@ const updateInvoice = async (ctx,token,contactID,invoiceID) => {
 /***************************************/
 const createProduct = async (ctx,token) => {
   try{
-    const productData = {...ctx.request.body};
-    var productName = productData.title;
-    var productDescription = productData.body_html;
-    const productID = productData.admin_graphql_api_id;
-    const productVariants = productData.variants;
+    var productName = ctx.request.body.title;
     var createProductStatus = false;
-    
-    await Promise.all(productVariants.map(async item => {
-      var insertData = await createProductVariantDataToInsert(token,productName,productDescription,item);
-      createProductStatus = await createProductVariantOnCloudbiz(token,insertData,productID,item.admin_graphql_api_id);
-    }));
+    ctx.request.body.variants.forEach(async(item, i) => {
+      var imageURL = '';
+      var cost_price = await getProductVariantUnitCost(item.admin_graphql_api_id);
+      ctx.request.body.images.forEach((image, j) => {
+        if(image.id == item.image_id){
+          imageURL = image.src;
+        }
+      });
+      var variantTitle = productName;
+      var reference = '';
+      if(item.title != 'Default Title'){
+        variantTitle = variantTitle+" - "+item.title;
+        reference =  item.title;
+      }
+      var productData = {
+        "type": "product",
+        "name": variantTitle,
+        "code": item.sku,
+        "reference": reference,
+        "description": ctx.request.body_html,
+        "category_id": "1401",
+        "all_discounts": 1,
+        "currency_id": "56",
+        "is_billable": 1,
+        "deliver_pack": 0,
+        "conversion_factor": "1",
+        "only_pack": 0,
+        "conversion_rate": 1,
+        "prices": [
+            {
+                "id": "1325",
+                "price": item.price,
+                "with_tax": !item.taxable
+            }
+        ],
+        "is_tax_exempt": 0,
+        "taxes": [
+            {
+                "id": 1125
+            }
+        ],
+        "image": imageURL,
+        "inventory": {
+            "unit_id": "1322",
+            "cost_price": cost_price,
+            "warehouses": [
+                {
+                    "initial_stock": item.inventory_quantity,
+                    "warehouse_id": "1207"
+                }
+            ]
+        }
+      };
+      const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/item',{
+        method:'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': token
+        },
+        body: JSON.stringify(productData)
+      });
+      const response = await resp.json();
+      if(response){
+        const saveProductRelationShip = await insertProductRelationship(ctx.request.body.admin_graphql_api_id,item.admin_graphql_api_id,response.id);
+        if(saveProductRelationShip){
+          createProductStatus = true;
+        }
+      }
+    });
     return createProductStatus;
   }catch(err){
     console.log(err);
@@ -394,79 +444,107 @@ const createProduct = async (ctx,token) => {
 
 const updateProduct = async (ctx,token) => {
   try{
-    //Eliminar en caso de que haya menos variantes
-    const productData = {...ctx.request.body};
-    var productName = productData.title;
-    var productDescription = productData.body_html;
-    const productID = productData.admin_graphql_api_id;
-    const productVariants = productData.variants;
-    var updateProductStatus = false;
-    const deleteMethod = `DELETE`;
-    const productSavedDocs = await getProductRelationship(productID,null,null);
-    if(productSavedDocs !== undefined){
-      var productSavedCopy = productSavedDocs;
-      let docCount = productSavedDocs.length;
-      let variantCount = productVariants.length;
-      if(variantCount < docCount){
-        productSavedDocs.forEach((item, i) => {
-          var dataDoc = item.data();
-          if(productVariants[i].id === dataDoc.shopifyVariantReference){
+    //variantes quitados
+    const productSavedDocs = await getProductRelationship(ctx.request.body.admin_graphql_api_id,null,null);
+    var productSavedCopy = productSavedDocs;
+    const productVariants = ctx.request.body.variants;
+    let docCount = productSavedDocs.length;
+    let variantCount = productVariants.length;
+    if(variantCount < docCount){
+      productSavedDocs.forEach((item, i) => {
+        var dataDoc = item.data();
+        if(variantCount <= docCount){
+          if(productVariants[i].id == dataDoc.shopifyVariantReference){
             productSavedCopy.splice(i,1);
           }
+        }
+      });
+      productSavedCopy.forEach(async(item, i) => {
+        var product = item.data();
+        var productID = product.cloudbizReference;
+        var response = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/item/'+productID,{
+          method: 'DELETE',
+          headers: {
+            'Content-Type' : 'application/json',
+            'token': token
+          }
         });
-        await Promise.all(productSavedCopy.map(async item => {
-          var product = item.data();
-          var productID = product.cloudbizReference;
-          var deleteUrl = `https://apinode.micloudbiz.com/gateway-api/v1/item/${productID}`;
-          var data = await sendCloudbizProductRequest(deleteUrl,deleteMethod,token);
-          if(data !== undefined){
-            await deleteProductRelationship(null,product.shopifyVariantReference,null);
-          }
-        }));
+        var data = await response.json();
+        if(data){
+          await deleteProductRelationship(null,product.shopifyVariantReference,null);
+        }
+      });
 
-        await Promise.all(productVariants.map(async item => {
-          var itemDoc = await getProductRelationship(null,item.admin_graphql_api_id,null);
-          var itemID = itemDoc[0].data();
-          var insertData = await createProductVariantDataToInsert(token,productName,productDescription,item,itemID,false);
-          const url = `https://apinode.micloudbiz.com/gateway-api/v1/item/${itemID.cloudbizReference}`;
-          const methodType = `PUT`;
-          const response = await sendCloudbizProductRequest(url,methodType,token,insertData);
-          if(response !== undefined){
-            updateProductStatus = true;
-          }
-        }));
-      }else if(variantCount > docCount){
-        await Promise.all(productSavedDocs.map(async item => {
-          var product = item.data();
-          var productID = product.cloudbizReference;
-          var deleteUrl = `https://apinode.micloudbiz.com/gateway-api/v1/item/${productID}`;
-          var data = await sendCloudbizProductRequest(deleteUrl,deleteMethod,token);
-          if(data !== undefined){
-            await deleteProductRelationship(null,product.shopifyVariantReference,null);
-          }
-        }));
-
-        await Promise.all(productVariants.map(async item => {
-          var insertData = await createProductVariantDataToInsert(token,productName,productDescription,item);
-          updateProductStatus = await createProductVariantOnCloudbiz(token,insertData,productID,item.admin_graphql_api_id);
-        }));
-      }else if(variantCount === docCount){
-        await Promise.all(productVariants.map(async item => {
-          var itemDoc = await getProductRelationship(null,item.admin_graphql_api_id,null);
-          var itemID = itemDoc[0].data();
-          var insertData = await createProductVariantDataToInsert(token,productName,productDescription,item,itemID,false);
-          const url = `https://apinode.micloudbiz.com/gateway-api/v1/item/${itemID.cloudbizReference}`;
-          const methodType = `PUT`;
-          const response = await sendCloudbizProductRequest(url,methodType,token,insertData);
-          if(response !== undefined){
-            updateProductStatus = true;
-          }
-        }));
-      }
-    }else{
-      updateProductStatus = await createProduct(ctx,token);
     }
-    return updateProductStatus;
+    //variantes quitados
+    var productName = ctx.request.body.title;
+    var createProductStatus = false;
+    ctx.request.body.variants.forEach(async(item, i) => {
+      var imageURL = '';
+      var cost_price = await getProductVariantUnitCost(item.admin_graphql_api_id);
+      ctx.request.body.images.forEach((image, j) => {
+        if(image.id == item.image_id){
+          imageURL = image.src;
+        }
+      });
+      var variantTitle = productName;
+      var reference = '';
+      if(item.title != 'Default Title'){
+        variantTitle = variantTitle+" - "+item.title;
+        reference =  item.title;
+      }
+      let itemDoc = await getProductRelationship(null,item.admin_graphql_api_id,null);
+      let itemID = itemDoc[0].data();
+      var shopifyProductInfo = await getProductInfoFromCloudbiz(token,itemID.cloudbizReference);
+      var categoryId = shopifyProductInfo.category_id;
+      var currencyId = shopifyProductInfo.currency_id;
+      var unitId = shopifyProductInfo.inventory.unit_id;
+      var priceId = shopifyProductInfo.prices[0].id;
+      var priceListId = shopifyProductInfo.prices[0].price_list.id;
+      var inventoryId = shopifyProductInfo.inventory.id;
+      var warehousesId = shopifyProductInfo.inventory.warehouses[0].id;
+      var warehouseID = shopifyProductInfo.inventory.warehouses[0].warehouse.id;
+      var productData = {
+          "name": variantTitle,
+          "code": item.sku,
+          "reference": reference,
+          "description": ctx.request.body_html,
+          "prices": [
+              {
+                  "price_list_id": priceListId,
+                  "price": item.price.toString(),
+                  "id": priceId,
+                  "with_tax": !item.taxable
+              }
+          ],
+          "inventory": {
+              "id": inventoryId,
+              "cost_price": cost_price,
+              "initial_stock": item.inventory_quantity,
+              "warehouses":[
+                {
+                  "id": warehousesId,
+                  "inventory_id": inventoryId,
+                  "warehouse_id": warehouseID,
+                  "initial_stock": item.inventory_quantity
+                }
+              ]
+          }
+      };
+      const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/item/'+itemID.cloudbizReference,{
+        method:'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': token
+        },
+        body: JSON.stringify(productData)
+      });
+      const response = await resp.json();
+      if(response){
+        createProductStatus = true;
+      }
+    });
+    return createProductStatus;
   }catch(err){
     console.log(err);
   }
@@ -474,10 +552,9 @@ const updateProduct = async (ctx,token) => {
 
 const deleteProduct = async (ctx,token) => {
   try{
-    const productData = {...ctx.request.body};
-    const productID = `gid://shopify/Product/${productData.id}`;
+    const productID = ctx.request.body.admin_graphql_api_id;
     const productSavedDocs = await getProductRelationship(productID,null,null);
-    await Promise.all(productSavedDocs.map(async item => {
+    productSavedDocs.forEach(async(item, i) => {
       var dataDoc = item.data();
       var response = await fetch(`https://apinode.micloudbiz.com/gateway-api/v1/item/${dataDoc.cloudbizReference}`,{
         method: 'DELETE',
@@ -490,7 +567,7 @@ const deleteProduct = async (ctx,token) => {
       if(data){
         await deleteProductRelationship(null,dataDoc.shopifyVariantReference,null);
       }
-    }));
+    });
     return true;
   }catch(err){
     console.log(err);
@@ -507,193 +584,6 @@ const getProductVariantUnitCost = async (productVariantID) => {
     console.log(err);
   }
 };
-
-const getProductLocation = async productVariantId => {
-  try{
-    var locations = [];
-    const cant = 10;
-    var variables = await productLocation(productVariantId,cant);
-    var inventoryInfo = await graphQLClient(getProductsLocations,variables);
-    if(inventoryInfo.productVariant != null){
-      var edges = inventoryInfo.productVariant.inventoryItem.inventoryLevels.edges;
-      locations = await Promise.all(edges.map(async item => {
-        var cloudbizLocation = await getLocationRelationship(item.node.location.id,null);
-        return {
-          initial_stock: item.node.available,
-          warehouse_id: cloudbizLocation.cloudbizReference
-        };
-      }));
-    }
-    return locations;
-  }catch(error){
-    console.error(error);
-  }
-}
-
-const getProductCollection = async productVariantId => {
-  try{
-    var collections = [];
-    const cant = 10;
-    var variables = await productCollection(productVariantId,cant);
-    var collectionInfo = await graphQLClient(getProductsCollections,variables);
-    if(collectionInfo.productVariant != null){
-      var edges = collectionInfo.productVariant.product.collections.edges;
-      collections = await Promise.all(edges.map(async item => {
-        var cloudbizCollection = await getCollectionRelationship(item.node.id,null);
-        return {
-          id: cloudbizCollection.cloudbizReference
-        }
-      }));
-    }
-    return collections;
-  }catch(error){
-    console.error(error);
-  }
-}
-
-const sendCloudbizProductRequest = async(url,methodType,token,productData = '') => {
-  try{
-    var options = {
-      method: methodType,
-      headers: {
-        'Content-Type': 'application/json',
-        'token': token
-      },
-      body: productData === ''?productData:JSON.stringify(productData)
-    }
-    const resp = await fetch(url,options);
-      const response = await resp.json();
-      return response;
-  }catch(error){
-    console.error(error);
-  }
-}
-
-const createProductVariantOnCloudbiz = async (token,insertData,shopifyProductId,shopifyVariantId) => {
-  try{
-    var createProductStatus = false;
-    const url = `https://apinode.micloudbiz.com/gateway-api/v1/item`;
-    const methodType = `POST`;
-    const response = await sendCloudbizProductRequest(url,methodType,token,insertData);
-    if(response.id !== undefined){
-      const saveProductRelationShip = await insertProductRelationship(shopifyProductId,shopifyVariantId,response.id);
-      if(saveProductRelationShip !== undefined){
-        createProductStatus = true;
-      }
-    }
-    return createProductStatus;
-  }catch(error){
-    console.error(error);
-  }
-}
-
-const createProductVariantDataToInsert = async (token,productName,productDescription,productVariant,itemRelation = null,toCreate = true) => {
-  try{
-    var prices = [];
-    var inventory = {};
-    var warehouses = [];
-    var imageURL = null;
-    var currencyId = '1150';
-    var categoryId = "91728";
-    const price_list_id = "1325";
-    var cost_price = await getProductVariantUnitCost(productVariant.admin_graphql_api_id);
-    var locations = await getProductLocation(productVariant.admin_graphql_api_id);
-    var collections = await getProductCollection(productVariant.admin_graphql_api_id);
-    if(collections.length > 0){
-      categoryId = collections[0].id;
-    }
-
-    /*productData.images.forEach(image => {
-      if(image.id === productVariant.image_id){
-        imageURL = imageResize(image.src,200,200);
-      }
-    });
-    if(imageURL === '' && productData.image != null){
-      imageURL = imageResize(productData.image.src,200,200);
-    }*/
-
-    var variantTitle = productName;
-    var reference = '';
-    if(productVariant.title != 'Default Title'){
-      variantTitle = `${variantTitle} - ${productVariant.title}`;
-      reference =  productVariant.title;
-    }
-
-    if(toCreate){
-      warehouses = [...locations];
-      prices.push({
-        "id": price_list_id,
-        "price": productVariant.price,
-        "with_tax": !productVariant.taxable
-      });
-
-      inventory = {
-        "unit_id": "1322",
-        "cost_price": cost_price.toString(),
-        "warehouses": warehouses
-      }
-    }else if(!toCreate && itemRelation !== null){
-      var shopifyProductInfo = await getProductInfoFromCloudbiz(token,itemRelation.cloudbizReference);
-      var WAREHOUSES_ARRAY = shopifyProductInfo.inventory.warehouses;
-      var unitId = shopifyProductInfo.inventory.unit_id;
-      var inventoryId = shopifyProductInfo.inventory.id;
-      var priceListId = shopifyProductInfo.prices[0].id;
-      currencyId = shopifyProductInfo.currency_id;
-      WAREHOUSES_ARRAY.forEach(wh => {
-        var w  = [...locations.map(location => {
-          return {
-            "id": wh.id,
-            "inventory_id": inventoryId,
-            "initial_stock": location.initial_stock,
-            "warehouse_id": location.warehouse_id
-          };
-        },wh).filter(item => {
-          return item.warehouse_id == wh.warehouse_id;
-        },wh)];
-        warehouses.push(w[0]);
-      });
-      prices.push({
-        "id": priceListId,
-        "price_list_id": price_list_id,
-        "price": productVariant.price.toString(),
-        "with_tax": !productVariant.taxable
-      });
-      inventory = {
-        "id": inventoryId,
-        "item_id": itemRelation.cloudbizReference,
-        "cost_price": cost_price.toString(),
-        "unit_id": unitId,
-        "initial_stock": productVariant.old_inventory_quantity,
-        "available_stock": productVariant.inventory_quantity,
-        "warehouses": warehouses
-      };
-    }
-
-    var ProductData = {
-      "type": "product",
-      "name": variantTitle,
-      "code": productVariant.sku,
-      "reference": reference,
-      "description": productDescription,
-      "category_id": categoryId.toString(),
-      "all_discounts": 1,
-      "currency_id": currencyId,
-      "is_billable": 1,
-      "deliver_pack": 0,
-      "conversion_factor": "1",
-      "only_pack": 0,
-      "conversion_rate": 1,
-      "prices": prices,
-      "is_tax_exempt": 0,
-      "taxes": [{"id": 1125}],
-      "image": imageURL,
-      "inventory": inventory
-    };
-    return ProductData;
-  }catch(error){
-    console.error(error);
-  }
-}
 
 /****************************************/
 /*********      CATEGORÍAS      *********/
@@ -720,7 +610,8 @@ const createCategory = async (ctx,token) => {
       "code": principalCode+actualId,
       "name": ctx.request.body.title,
       "description": ctx.request.body.body_html,
-      "parent_id": 91727
+      "parent_id": 1401
+      //"parent_id": 91727
     };
     const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/category',{
       method:'POST',
@@ -734,8 +625,8 @@ const createCategory = async (ctx,token) => {
     if(response){
       const saveCollectionRelationShip = await insertCollectionRelationship(ctx.request.body.admin_graphql_api_id,response.id);
       if(saveCollectionRelationShip){
-        await insertLastCollectionSubId(actualId);
         createCollectionStatus = true;
+        await insertLastCollectionSubId(actualId);
       }
     }
     return createCollectionStatus;
@@ -750,28 +641,21 @@ const updateCategory = async (ctx,token) => {
     await getLastCollectionSubId();
     const id = ctx.request.body.admin_graphql_api_id;
     const categoryId = await getCollectionRelationship(id,null);
-    if(categoryId !== null){
-      const categoryData = {
-        "name":ctx.request.body.title,
-        "description":ctx.request.body.body_html
-      };
-      const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/category/'+categoryId.cloudbizReference,{
-        method:'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'token': token
-        },
-        body: JSON.stringify(categoryData)
-      });
-      const response = await resp.json();
-      if(response){
-        var lastIdAI = await getLastCollectionSubId();
-        actualId = parseInt(lastIdAI)-1;
-        await insertLastCollectionSubId(actualId);
-        updateCollectionStatus = true;
-      }
-    }else{
-      updateCollectionStatus = await createCategory(ctx,token);
+    const categoryData = {
+      "name":ctx.request.body.title,
+      "description":ctx.request.body.body_html
+    };
+    const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/category/'+categoryId.cloudbizReference,{
+      method:'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'token': token
+      },
+      body: JSON.stringify(categoryData)
+    });
+    const response = await resp.json();
+    if(response){
+      updateCollectionStatus = true;
     }
 
     return updateCollectionStatus;
@@ -809,14 +693,12 @@ const deleteCategory = async (ctx,token) => {
 
 const createLocation = async (ctx,token) => {
   try{
-    const locationRequest = {...ctx.request.body};
     var createLocationsStatus = false;
-    var locationName = locationRequest.name;
-    var notes = locationRequest.phone ? `Teléfono: ${locationRequest.phone}`:``;
+    var locationName = ctx.request.body.name;
     const locationData = {
       "name":locationName,
-      "address":locationRequest.address1+ ", "+ locationRequest.address2+ ", "+ locationRequest.city+ ", "+locationRequest.country_name,
-      "notes":notes
+      "address":ctx.request.body.address1+ ", "+ ctx.request.body.address2+ ", "+ ctx.request.body.city+ ", "+ctx.request.body.country_name,
+      "notes":"Teléfono: "+ ctx.request.body.phone
     };
     const resp = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/warehouse',{
       method:'POST',
@@ -828,7 +710,7 @@ const createLocation = async (ctx,token) => {
     });
     const response = await resp.json();
     if(response.id != undefined){
-      const saveLocationRelationShip = await insertLocationRelationship(locationRequest.admin_graphql_api_id,response.id);
+      const saveLocationRelationShip = await insertLocationRelationship(ctx.request.body.admin_graphql_api_id,response.id);
       if(saveLocationRelationShip){
         createLocationsStatus = true;
       }
@@ -841,30 +723,25 @@ const createLocation = async (ctx,token) => {
 
 const updateLocation = async (ctx,token) => {
   try{
-    const locationRequest = {...ctx.request.body};
     var updateLocationsStatus = false;
-    var warehouseReference = await getLocationRelationship(locationRequest.admin_graphql_api_id,null);
-    if(warehouseReference){
-      var locationName = locationRequest.name;
-      const locationData = {
-        "name":locationName,
-        "address":locationRequest.address1+ ", "+ locationRequest.address2+ ", "+ locationRequest.city+ ", "+locationRequest.country_name,
-        "notes":"Teléfono: "+ locationRequest.phone
-      };
-      const resp = await fetch(`https://apinode.micloudbiz.com/gateway-api/v1/warehouse/${warehouseReference.cloudbizReference}`,{
-        method:'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'token': token
-        },
-        body: JSON.stringify(locationData)
-      });
-      const response = await resp.json();
-      if(response.id != undefined){
-        updateLocationsStatus = true;
-      }
-    }else{
-      updateLocationsStatus = await createLocation(ctx,token);
+    var warehouseReference = await getLocationRelationship(ctx.request.body.admin_graphql_api_id,null);
+    var locationName = ctx.request.body.name;
+    const locationData = {
+      "name":locationName,
+      "address":ctx.request.body.address1+ ", "+ ctx.request.body.address2+ ", "+ ctx.request.body.city+ ", "+ctx.request.body.country_name,
+      "notes":"Teléfono: "+ ctx.request.body.phone
+    };
+    const resp = await fetch(`https://apinode.micloudbiz.com/gateway-api/v1/warehouse/${warehouseReference.cloudbizReference}`,{
+      method:'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'token': token
+      },
+      body: JSON.stringify(locationData)
+    });
+    const response = await resp.json();
+    if(response.id != undefined){
+      updateLocationsStatus = true;
     }
 
     return updateLocationsStatus;
@@ -1172,9 +1049,9 @@ const getAllCloudbizProducts = async (token,countRow) => {
   }
 }
 
-const getAllCloudbizLocations = async(token,countRow) => {
+const getAllCloudbizLocations = async(token) => {
   try{
-    const response = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/warehouse?page=1&number_result='+countRow+'&requestRowNumber=true',{
+    const response = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/warehouse',{
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

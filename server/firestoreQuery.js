@@ -166,18 +166,13 @@ const getAllFirestoreCustomers = async () => {
 /*********      PRODUCTOS      *********/
 /***************************************/
 
-const insertProductRelationship = async (shopifyProductID,shopifyVariantID,cloudbizProductID,inventoryId = null) => {
-  try{
-    const res = await database.collection('product').add({
-      shopifyReference: shopifyProductID.toString(),
-      shopifyVariantReference:shopifyVariantID.toString(),
-      cloudbizReference: cloudbizProductID.toString(),
-      shopifyInventoryId: inventoryId !== null ? inventoryId.toString() : null
-    });
-    return res.id;
-  }catch(error){
-    console.error(error);
-  }
+const insertProductRelationship = async (shopifyProductID,shopifyVariantID,cloudbizProductID) => {
+  const res = await database.collection('product').add({
+    shopifyReference: shopifyProductID.toString(),
+    shopifyVariantReference:shopifyVariantID.toString(),
+    cloudbizReference: cloudbizProductID.toString()
+  });
+  return res.id;
 };
 
 const getProductRelationship = async (shopifyProductID,shopifyVariantID,cloudbizProductID) => {
@@ -195,7 +190,7 @@ const getProductRelationship = async (shopifyProductID,shopifyVariantID,cloudbiz
   const productRef = database.collection('product');
   const snapshot = await productRef.where(whereID, '==', searchID).get();
   if (snapshot.empty) {
-    console.log('Relacion de productos no encontrados');
+    console.log('No matching documents.');
     return undefined;
   }
   data = snapshot.docs;
@@ -205,10 +200,10 @@ const getProductRelationship = async (shopifyProductID,shopifyVariantID,cloudbiz
 const deleteProductRelationship = async (shopifyProductID,shopifyVariantID,cloudbizProductID) => {
   var whereID = 'shopifyReference';
   var searchID = '';
-  if(shopifyProductID == null && shopifyVariantID == null){
+  if(shopifyCustomerID == null && shopifyVariantID == null){
     whereID = 'cloudbizReference';
     searchID = cloudbizProductID.toString();
-  }else if(shopifyProductID == null && cloudbizProductID == null){
+  }else if(shopifyCustomerID == null && cloudbizProductID == null){
     whereID = 'shopifyVariantReference';
     searchID = shopifyVariantID.toString();
   }else{
@@ -246,7 +241,7 @@ const getCollectionRelationship = async(shopifyCollectionID,cloudbizCollectionID
   const customerRef = database.collection('collection');
   const snapshot = await customerRef.where(whereID, '==', searchID).get();
   if (snapshot.empty) {
-    console.log('Relacion de coleccion o categoría no encontrada');
+    console.log('No matching documents.');
     return undefined;
   }
   data = snapshot.docs[0].data();
@@ -333,7 +328,7 @@ const getLocationRelationship = async(shopifyCollectionID,cloudbizCollectionID) 
   const customerRef = database.collection('location');
   const snapshot = await customerRef.where(whereID, '==', searchID).get();
   if (snapshot.empty) {
-    console.log('Bodega no encontrada..!');
+    console.log('No matching documents.');
     return undefined;
   }
   data = snapshot.docs[0].data();
@@ -341,7 +336,7 @@ const getLocationRelationship = async(shopifyCollectionID,cloudbizCollectionID) 
 }
 
 const insertLocationRelationship = async(shopifyCollectionID,cloudbizCollectionID) => {
-  const res = await database.collection('location').add({
+  const res = await database.collection('discount').add({
     shopifyReference: shopifyCollectionID.toString(),
     cloudbizReference: cloudbizCollectionID.toString()
   });

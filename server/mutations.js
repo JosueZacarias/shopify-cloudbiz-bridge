@@ -91,15 +91,6 @@ const productVariantCreate = gql`mutation ($input: ProductVariantInput!) {
     }
     productVariant {
       id
-      inventoryItem{
-        inventoryLevels(first: 1){
-          edges{
-            node{
-              id
-            }
-          }
-        }
-      }
     }
     userErrors {
       field
@@ -127,18 +118,6 @@ const productVariantDelete = gql`mutation ($id: ID!) {
   productVariantDelete(id: $id) {
     deletedProductVariantId
     product {
-      id
-    }
-    userErrors {
-      field
-      message
-    }
-  }
-}`;
-
-const productVariantInventoryUpdate = gql`mutation ($input: InventoryAdjustQuantityInput!) {
-  inventoryAdjustQuantity(input: $input) {
-    inventoryLevel {
       id
     }
     userErrors {
@@ -251,7 +230,5 @@ module.exports = {
   discountDelete,
   collectionCreate,
   collectionUpdate,
-  collectionDelete,
-
-  productVariantInventoryUpdate
+  collectionDelete
 };

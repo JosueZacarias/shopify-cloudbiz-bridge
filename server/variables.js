@@ -90,29 +90,6 @@ const locationAll = async (cant,cursor) => {
   return variables;
 }
 
-const productLocation = async (id,cant) => {
-  const variables = {
-    "id":id,
-    "cant":cant
-  }
-  return variables;
-
-}
-const productCollection = async (id,cant) => {
-  const variables = {
-    "id":id,
-    "cant":cant
-  }
-  return variables;
-}
-
-const productInventory = async (variantID,locationID) => {
-  return {
-    "variant_id": variantID,
-    "location_id": locationID
-  }
-}
-
 //SECCIÓN DE VARIABLES DE ESCRITURA O MUTACIONES
 const customerVariableMutationCreate = async (email,firstName,lastName,phone1,phone2,address1,city,id = null) => {
   let input = {};
@@ -208,16 +185,6 @@ const productVariableMutationUpdate = async(id,descriptionHtml,published,status,
   return input;
 };
 
-const inventoryAdjustQuantity = async(inventoryLevelId,availableDelta) => {
-  let variable = {
-    "input":{
-      "inventoryLevelId": inventoryLevelId,
-      "availableDelta": availableDelta
-    }
-  }
-  return variable;
-}
-
 const productVariableMutationDelete = async(id) => {
   return {
     "input": {
@@ -243,9 +210,9 @@ const productImageVariableMutationCreate = async(alt,sourceUrl) => {
     "mediaContentType": "IMAGE",
     "originalSource": sourceUrl
   }
-};
+}
 
-const productVariantVariableMutationCreate = async ( productId,
+const productVariantVariableMutationCreate = async( productId,
                                                     sku,
                                                     taxCode,
                                                     taxable,
@@ -275,7 +242,7 @@ const productVariantVariableMutationCreate = async ( productId,
   return input;
 };
 
-const productVariantVariableMutationUpdate = async( id,
+const productVariantVariableMutationUpdate = async ( productId,
                                                     sku,
                                                     taxCode,
                                                     taxable,
@@ -284,11 +251,13 @@ const productVariantVariableMutationUpdate = async( id,
                                                     compareAtPrice,
                                                     imageSrc,
                                                     inventoryItem,
-                                                    status = "ACTIVE"
-                                                    ) => {
+                                                    status = "ACTIVE",
+                                                    inventoryItemInput,
+                                                    id) => {
   let input = {
     "input":{
       "id": id,
+      "productId":productId,
       "sku":sku,
       "taxCode":taxCode,
       "taxable":taxable,
@@ -296,10 +265,11 @@ const productVariantVariableMutationUpdate = async( id,
       "price":price,
       "compareAtPrice":compareAtPrice,
       "imageSrc":imageSrc,
-      "InventoryItemInput":inventoryItem,
+      "inventoryItem":inventoryItem,
       "inventoryManagement": "SHOPIFY",
       "inventoryPolicy": "DENY",
       "status": status,
+      "InventoryItemInput": inventoryItemInput
     }
   }
   return input;
@@ -583,11 +553,5 @@ module.exports = {
   collectionsAll,
   discountAll,
   couponDiscountAll,
-  locationAll,
-
-  productLocation,
-  productCollection,
-
-  inventoryAdjustQuantity,
-  productInventory
+  locationAll
 }
