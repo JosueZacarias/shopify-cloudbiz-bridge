@@ -311,8 +311,6 @@ const verifyProductsChangesOnCloudbiz = async() => {
             }
           });
 
-          
-          
           var ImageUploadedId = [];
           if(createProduct.productCreate.product.images.edges.length > 0){
             createProduct.productCreate.product.images.edges.forEach(image => {
