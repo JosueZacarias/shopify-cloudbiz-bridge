@@ -61,7 +61,7 @@ customRouter.post('/api/v1/customer/createCustomer',
     const token = await getToken();
     const customer = await createCustomer(ctx,token);
     if(customer){
-      console.log('Contacto creado con éxito con id: '+ customer.id);
+      console.log('Contacto creado con éxito');
     }else{
       console.log('Error en la creación de contacto');
     }
@@ -97,7 +97,7 @@ customRouter.post('/api/v1/customer/deleteCustomer',
 
 customRouter.post('/api/v1/invoice/createInvoice',
   async (ctx) => {
-    ctx.status = 200;
+    ctx.res.statusCode = 200;
     const token = await getToken();
     const email = ctx.request.body.email;
     const subject = 'Factura generado para el cliente: ';
@@ -278,7 +278,7 @@ customRouter.post('/api/v1/customer/createLocation',
   }
 );
 
-customRouter.post('api/v1/customer/updateLocation',
+customRouter.post('/api/v1/customer/updateLocation',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -291,7 +291,7 @@ customRouter.post('api/v1/customer/updateLocation',
   }
 );
 
-customRouter.post('api/v1/customer/deleteLocation',
+customRouter.post('/api/v1/customer/deleteLocation',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();

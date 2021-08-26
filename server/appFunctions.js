@@ -1,6 +1,7 @@
 const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
 const axios = require('axios');
+const Jimp = require('jimp');
 const HTMLToPDF = require('convert-html-to-pdf').default;
 const { GraphQLClient } = require('graphql-request');
 const { getCustomerVIPType, insertCustomerVIPType, deleteCustomerVIPType } = require('./firestoreQuery.js');
@@ -157,6 +158,19 @@ const graphQLClient = async (query,variables) => {
   }
 };
 
+
+const imageResize = (imageUrl,w,h) => {
+  try{
+    const newImage = Jimp.read(imageUrl);
+    var mime = newImage.getMIME();
+    newImage.resize(w, h);
+    const base64 = newImage.getBase64(mime, (err, src) => { return src; }); 
+    return base64;
+  }catch(error){
+    console.error(error);
+  }
+}
+
 module.exports = {
   getPDF,
   getToken,
@@ -166,5 +180,6 @@ module.exports = {
   graphQLClient,
   verifyCustomerVIPType,
   createCustomerVIPType,
-  pad
+  pad,
+  imageResize
 };

@@ -9,7 +9,7 @@ const { default: createShopifyAuth } = require('@shopify/koa-shopify-auth');
 const { verifyRequest } = require('@shopify/koa-shopify-auth');
 const { default: Shopify, ApiVersion, AuthQuery } = require('@shopify/shopify-api');
 const Router = require('koa-router');
-const { verifyProductsChangesOnCloudbiz } = require('./server/apiCalls.js');
+const { updateDataFromCloudbiz } = require('./server/apiCalls.js');
 const { sendEmailToDev } = require('./server/appFunctions');
 //const { setQueryMutationAuth } = require('./server/apiClient.js');
 dotenv.config();
@@ -128,14 +128,15 @@ app.prepare().then(() => {
 
   server.listen(port, () => {
     console.log(`> Ready on http://localhost:${port}`);
-      // try{
-      //   setInterval(async function(){
-      //     var result = await verifyProductsChangesOnCloudbiz();
-      //     console.log(result);
-      //   },10000);
-      // }
-      // catch(err){
-      //   console.log(err);
-      // }
+      try{
+        const mseg = 180000;
+        const runRequest = async () => {
+          await updateDataFromCloudbiz();
+        }
+        setInterval(() => runRequest() ,mseg);
+      }
+      catch(err){
+        console.log(err);
+      }
   });
 });

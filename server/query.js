@@ -8,9 +8,34 @@ const getInventoryByIDQuery = gql`query ($id: ID!){
   }
 }`;
 
-const getProductByIDQuery = gql`query ($id: ID!){
+const getProductByIDQuery = gql`query ($id: ID!, $cant: Int!){
   product(id: $id){
     title
+    variants(first: $cant){
+      edges{
+        node{
+          inventoryItem{
+            inventoryLevels(first: 1){
+              edges{
+                node{
+                  id
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+const getProductInventoryId = gql`query ($variant_id: ID!, $location_id:ID!){
+  productVariant(id: $variant_id){
+    inventoryItem{
+      inventoryLevel(locationId: $location_id){
+        id
+      }
+    }
   }
 }`;
 
@@ -60,6 +85,15 @@ const getAllShopifyProducts = gql`query ($cant: Int, $cursor: String){
         id
         description
         descriptionHtml
+        totalVariants
+        variants(first: $cant){
+          edges{
+            node{
+              id
+              title
+            }
+          }
+        }
       }
     }
     pageInfo{
@@ -236,6 +270,10 @@ const getAllShopifyLocations = gql`query ($cant: Int, $cursor: String){
   }
 }`;
 
+const getAllProductVariantsByProduct = gql`query(){
+
+}`
+
 const getCustomerVipTypeByNameQuery = gql`query ($query: String){
   customerSavedSearches(first: 1, query: $query){
     edges{
@@ -270,6 +308,42 @@ const getCollectionWithProductByIdQuery = gql`query ($id: ID!, $productCount: In
   }
 }`;
 
+const getProductsLocations = gql`query ($id: ID!,$cant: Int){
+  productVariant(id:$id){
+    id
+    displayName
+    inventoryItem{
+      inventoryLevels(first:$cant){
+        edges{
+          node{
+            available
+            location{
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+const getProductsCollections = gql`query ($id: ID!,$cant: Int){
+  productVariant(id:$id){
+    id
+    product{
+      collections(first: $cant){
+        edges{
+          node{
+            id
+            title
+          }
+        }
+      }
+    }
+  }
+}`;
+
 
 module.exports = {
   getProductByIDQuery,
@@ -282,5 +356,9 @@ module.exports = {
   getAllShopifyCollections,
   getAllShopifyDiscounts,
   getAllShopifyCouponDiscounts,
-  getAllShopifyLocations
+  getAllShopifyLocations,
+
+  getProductsLocations,
+  getProductsCollections,
+  getProductInventoryId
 };
