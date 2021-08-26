@@ -1,9 +1,10 @@
-const { createTransport } = require("nodemailer");
-const { config } = require("dotenv");
-const { post, get } = require('axios');
-const HTMLToPDF = require('convert-html-to-pdf');
+const nodemailer = require("nodemailer");
+const dotenv = require("dotenv");
+const axios = require('axios');
+const Jimp = require('jimp');
+const HTMLToPDF = require('convert-html-to-pdf').default;
 const { GraphQLClient } = require('graphql-request');
-const { getCustomerVIPType, insertCustomerVIPType } = require('../firestore/customer');
+const { getCustomerVIPType, insertCustomerVIPType, deleteCustomerVIPType } = require('./firestoreQuery.js');
 
 const verifyCustomerVIPType = async (tag) => {
   try{
@@ -49,8 +50,8 @@ const pad = (number) => {
 //Token para peticiones a CloudBiz
 const getToken = async () => {
   try {
-    config();
-      const resp = await post('https://api.micloudbiz.com/v1/auth/login',{
+    dotenv.config();
+      const resp = await axios.post('https://api.micloudbiz.com/v1/auth/login',{
           "email": process.env.CLOUDBIZ_USER,"password":process.env.CLOUDBIZ_PASSWORD
         },{
           headers: {
@@ -76,7 +77,7 @@ const getPDF = async (htmlContent) => {
 };
 //Cambiar el remitente ya para producción
 const sendEmail = async (subject,mailBody,toAddresses,pdf) => {
-  let transporter = createTransport({
+  let transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
@@ -92,7 +93,7 @@ const sendEmail = async (subject,mailBody,toAddresses,pdf) => {
     });
   let attachments = { filename: "factura.pdf", content: pdf }
   const mailOptions = {
-    from: "INVERSIONES ZACARÍAS <josuej.zacariasg@gmail.com>",
+    from: `CUBIC <${process.env.MAIL_USERNAME}>`,
     to: toAddresses,
     subject: subject,
     html:mailBody,
@@ -102,10 +103,36 @@ const sendEmail = async (subject,mailBody,toAddresses,pdf) => {
   let mail = await transporter.sendMail(mailOptions);
   return mail.messageId;
 };
+
+const sendEmailToDev = async (subject,mailBody,toAddresses) => {
+  let transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        type: 'OAuth2',
+        user: process.env.MAIL_USERNAME,
+        clientId: process.env.OAUTH_CLIENT_ID,
+        clientSecret: process.env.OAUTH_CLIENT_SECRET,
+        refreshToken: process.env.OAUTH_REFRESH_TOKEN,
+        accessToken: process.env.ACCESS_TOKEN,
+        expires: 1484314697598
+      }
+    });
+  const mailOptions = {
+    from: `CUBIC <${process.env.MAIL_USERNAME}>`,
+    to: toAddresses,
+    subject: subject,
+    html:mailBody
+  };
+
+  let mail = await transporter.sendMail(mailOptions);
+  return mail.messageId;
+};
 //Obtener factura con ID de cloudBiz
 const getInvoiceWithId = async (token,invoiceId) => {
   try{
-    const resp = await get('https://apinode.micloudbiz.com/gateway-api/v1/print/document/invoice/'+invoiceId,{
+    const resp = await axios.get('https://apinode.micloudbiz.com/gateway-api/v1/print/document/invoice/'+invoiceId,{
       headers: {
         'token': token
       }
@@ -131,13 +158,28 @@ const graphQLClient = async (query,variables) => {
   }
 };
 
+
+const imageResize = (imageUrl,w,h) => {
+  try{
+    const newImage = Jimp.read(imageUrl);
+    var mime = newImage.getMIME();
+    newImage.resize(w, h);
+    const base64 = newImage.getBase64(mime, (err, src) => { return src; }); 
+    return base64;
+  }catch(error){
+    console.error(error);
+  }
+}
+
 module.exports = {
   getPDF,
   getToken,
   sendEmail,
+  sendEmailToDev,
   getInvoiceWithId,
   graphQLClient,
   verifyCustomerVIPType,
   createCustomerVIPType,
-  pad
+  pad,
+  imageResize
 };

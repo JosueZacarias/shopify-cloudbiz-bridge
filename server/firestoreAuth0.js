@@ -1,6 +1,6 @@
 const admin = require('firebase-admin');
 
-const serviceAccount = require('../../auth/app-bridge-pos-f907fedda091.json');
+const serviceAccount = require('../auth/shopify-cloudbiz-bridge-f05fe08034a2.json');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
