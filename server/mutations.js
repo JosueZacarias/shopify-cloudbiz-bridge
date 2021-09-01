@@ -41,6 +41,7 @@ const productCreateMutation = gql`mutation ($input: ProductInput!) {
   productCreate(input: $input) {
     product {
       id
+      totalVariants
       images(first: 10){
         edges{
           node{

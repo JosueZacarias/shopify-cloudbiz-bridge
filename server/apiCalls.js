@@ -20,7 +20,8 @@ const {
   couponDiscountAll,
   locationAll,
   productInventory,
-  inventoryAdjustQuantity
+  inventoryAdjustQuantity,
+  specificElementWithCant
 } = require('./variables.js');
 const {
   getAllCloudbizCustomers,
@@ -36,7 +37,8 @@ const {
 const {
   getToken,
   graphQLClient,
-  pad
+  pad,
+  getValue
 } = require('./appFunctions.js');
 const {
   insertCustomerRelationship,
@@ -82,13 +84,13 @@ const {
 } = require('./mutations.js');
 
 const {
-  getProductVariantByIDQuery,
   getAllShopifyCustomers,
   getAllShopifyProducts,
   getAllShopifyCollections,
   getAllShopifyDiscounts,
   getAllShopifyLocations,
-  getProductInventoryId
+  getProductInventoryId,
+  getAllProductVariantsByProduct
 } = require('./query.js');
 
 const verifyCustomersChangesOnCloudbiz = async () => {
@@ -246,208 +248,134 @@ const verifyProductsChangesOnCloudbiz = async() => {
     //Clasificar productos unicos o productos con variantes
     let arrayProductUnique = [];
     let arrayProductVariant = [];
-    let arrayProductVarianGroup = [];
+    let arrayProductVariantGroup = [];
     cloudbizProducts.forEach(product => {
       if(product.type === "product"){
         if(RegexVariants.test(product.name)){
           arrayProductVariant.push(product);
         }else{
-          arrayProductUnique.push(product.id);
+          arrayProductUnique.push(product);
         }
       }
     });
 
+    /**/
+    /*###############################*/
+    /*CLASIFICACION DE VARIANTES*/
+    /*###############################*/
+    /**/
+    cloudbizProducts.forEach(product => {
+      var productId = product.id;
+      var ifUniqueProductName = product.name.split(" - ");
+      var group = [];
+      arrayProductVariant.forEach(variant => {
+        var variantProductName = variant.name.split(" - ");
+        if(ifUniqueProductName[0] == variantProductName[0]){
+          group.push(variant);
+        }
+      });
+      arrayProductVariantGroup[productId] = group;
+    })
+
     if(cloudbizProductsCount > firestoreProductsCount && cloudbizProductsCount > shopifyProductsCount){
       await Promise.all(cloudbizProducts.map(async item => {
         if(item.type === "product"){
-          //Verificar la categoría o colección del producto
-          var categoryRelation = await getCollectionRelationship(null,item.category.id);
-          var collections = [];
-          if(categoryRelation != undefined){
-            collections.push(categoryRelation.shopifyReference);
-          }
-          //Crear variable de creación de imagén del producto
-          var images = null;
-          if(item.image != "" || item.image != undefined || item.image != null){
-            images = await productImageVariableMutationCreate(item.name,item.image);
-          }
-          var totalPrice = 0.0;
-          //Obtener el precio por defecto del producto en cloudbiz
-          var price = item.prices.filter(price => {
-            if(price.price_list.is_default == 1){
-              return price;
-            }
-          });
-          //verificar si el producto tiene impuestos aplicados
-          var taxable = (item.taxes.length > 0) ? true : false;
-          //Verificar si el precio del producto tiene incluido el impuesto en su total
-          var taxaIncluded = (price.with_tax == 1) ? true : false;
-    
-          //Incluir o no el impuesto en el precio del producto
-          if(taxaIncluded){
-            totalPrice = price.price*1.15;
-          }else{
-            totalPrice = price.price;
-          }
-          //para establecer el precio de costo del producto
-          var inventory = await productInventoryItemInput(item.inventory.cost_price,true);
-          //para establecer la cantidad de inventario del producto
-          var bodega = [];
-          item.inventory.warehouses.forEach(async warehouse => {
-            var location = await getLocationRelationship(null,warehouse.warehouse_id);
-            var inventoryLevelInput = await productInventoryQuantitiesInput(warehouse.available_stock,location.shopifyReference);
-            bodega.push(inventoryLevelInput);
-          });
-          /**/
-          /*########################################################################*/
-          /*                      MANEJO DE VARIANTES DE PRODUCTO                   */
-          /*########################################################################*/
-          /**/
-          var ifUniqueProductName = item.name.split(" - ");
-          arrayProductVariant.forEach(variant => {
-            var variantProductName = variant.split(" - ");
-            if(ifUniqueProductName == variantProductName){
-              
-            }
-          });
+          const principalProductData = await getCloudbizProductInfoBasic(item);
+          const index = item.id;
+          var variantsArray = [];
 
-          var ImageUploadedId = [];
-          if(createProduct.productCreate.product.images.edges.length > 0){
-            createProduct.productCreate.product.images.edges.forEach(image => {
-              ImageUploadedId.push(image.node.id);
-            });
-            ImageUploadedId = createProduct.productCreate.product.images.edges[0].node.id;
+          if(arrayProductVariantGroup.length > 0){
+            await Promise.all(arrayProductVariantGroup[index].map(async productData => {
+              var variantProductData = await getCloudbizProductInfoBasic(productData);
+              var variableObject = await createProductVariantVariable(variantProductData);
+              variantsArray.push(variableObject);
+            }));
           }
-          
-          var productVariant = await productVariantVariableMutationCreate(
-            createProduct.productCreate.product.id,
-            item.code,
-            null,
-            taxable,
-            item.title,
-            totalPrice,
-            null,
-            inventory,
-            bodega,
-            ImageUploadedId
-          );
-          var createVariantProduct = await graphQLClient(productVariantCreate,productVariant);
-          if(createVariantProduct.productVariantCreate.productVariant.id != undefined){
-            var locationID = createVariantProduct.productVariantCreate.productVariant.inventoryItem.inventoryLevels.edges[0].node.id;
-            var variableInventory = await productInventory(createVariantProduct.productVariantCreate.productVariant.id,locationID);
-            var inventoryData = await graphQLClient(getProductInventoryId,variableInventory);
-            var insertFirebase = await insertProductRelationship(
-              createProduct.productCreate.id,
-              createVariantProduct.productVariantCreate.productVariant.id,
-              item.id,
-              inventoryData.productVariant.inventoryItem.inventoryLevel.id
-              );
-            if(insertFirebase){
-              productCreationStatus = true;
-            }
-          }
-          
-          
-          /**/
-          /*#######################################################################*/
-          /*#######################################################################*/
-          /**/
 
-
-  
-          variables = await productVariableMutationCreate(
-            item.description,
-            (item.is_inventory == 1) ? true : false,//Publicar si tienen inventario
-            "ACTIVE", //Estado
-            [], //etiquetas
-            item.name, //titulo
-            [],//variantes
-            "",//Proveedor
-            item.type,//tipo de producto
-            [images],//coleccion de imagenes
-            collections,//colecciones a las que puede pertenener
-            []//Colecciones de las que se tiene que quitar
-          );
-          var createProduct = await graphQLClient(productCreateMutation,variables);
-  
-          if(productUnique.length > 0 && productUnique.indexOf(item.id) !== -1){
-            
-            if(createProduct.productCreate.product.id != undefined){
-              
-            }
+          if(variantsArray.length === 0 ){
+            var variableObject = await createProductVariantVariable(principalProductData,true);
+            variantsArray.push(variableObject);
           }
+
+          const variables = await createProductVariable(principalProductData,variantsArray);
+          const createProduct = await graphQLClient(productCreateMutation,variables);
+          const searchProductId = ["productCreate","product","id"];
+          const searchTotalVariants = ["productCreate","product","totalVariants"];
+          const productId = await getValue(searchProductId,createProduct);
+          const totalVariants = await getValue(searchTotalVariants,createProduct);
+          const productVariantVariable = await specificElementWithCant(productId,totalVariants);
+          const productVariants = await graphQLClient(getAllProductVariantsByProduct,productVariantVariable);
+          const searchVariants = ["product","variants","edges"];
+          const allVariantsCreated = await getValue(searchVariants,productVariants);
+
+          await Promise.all(allVariantsCreated.map(async variant => {
+            const searchProductVariandId = ["node","id"];
+            const productVariantId = await getValue(searchProductVariandId,variant);
+            if(productVariantId != undefined){
+              const searchInventoryLevelId = ["node","inventoryItem","inventoryLevels","edges",0,"node","id"];
+              var invetoryLevelId = await getValue(searchInventoryLevelId,variant);
+              var insertFirebase = await insertProductRelationship(
+                                                                              productId,
+                                                                              productVariantId,
+                                                                              index,
+                                                                              invetoryLevelId
+                                                                            );
+              if(insertFirebase){
+                productCreationStatus = true;
+              }
+            }
+          }))
         }
       }));
     }else if(cloudbizProductsCount == firestoreProductsCount && cloudbizProductsCount == shopifyProductsCount){
       //Identificar productos provenientes de cloudbiz con variantes
       await Promise.all(cloudbizProducts.map(async item => {
         if(item.type === "product"){
-          //Verificar la categoría o colección del producto
-          var categoryRelation = await getCollectionRelationship(null,item.category.id);
-          //Verificar la existencia en firebase
-          var relationship = await getProductRelationship(null,null,item.id);
-          //Crear variable de creación de imagén del producto
-          var images = null;
-          if(item.image != "" || item.image != undefined || item.image != null){
-            images = await productImageVariableMutationCreate(item.name,item.image);
+          const principalProductData = await getCloudbizProductInfoBasic(item);
+          const index = item.id;
+          var variantsArray = [];
+
+          var relationship = await getProductRelationship(null,null,index);
+
+          if(arrayProductVariantGroup.length > 0){
+            await Promise.all(arrayProductVariantGroup[index].map(async productData => {
+              var variantProductData = await getCloudbizProductInfoBasic(productData);
+              var variableObject = await createProductVariantVariable(variantProductData);
+              variantsArray.push(variableObject);
+            }));
           }
-          
-          var totalPrice = 0.0;
-          //Obtener el precio por defecto del producto en cloudbiz
-          var price = item.prices.filter(price => {
-            if(price.price_list.is_default == 1){
-              return price;
-            }
-          });
-          //verificar si el producto tiene impuestos aplicados
-          var taxable = (item.taxes.length > 0) ? true : false;
-          //Verificar si el precio del producto tiene incluido el impuesto en su total
-          var taxaIncluded = (price.with_tax == 1) ? true : false;
-    
-          //Incluir o no el impuesto en el precio del producto
-          if(taxaIncluded){
-            totalPrice = price.price*1.15;
-          }else{
-            totalPrice = price.price;
+
+          if(variantsArray.length === 0 ){
+            var variableObject = await createProductVariantVariable(principalProductData);
+            variantsArray.push(variableObject);
           }
-          //para establecer el precio de costo del producto
-          var inventory = await productInventoryItemInput(item.inventory.cost_price,true);
-          var inventoryLevelId = "";
           
           if(RegexVariants.test(item.name)){
             var variable = await productVariantVariableMutationUpdate(
               relationship.shopifyVariantReference,
               item.code,
-              null,
               taxable,
               item.title,
               totalPrice,
-              null,
               item.image,
               inventory
             );
             var createVariantProduct = await graphQLClient(productVariantUpdate,variable);
-            if(createVariantProduct !== undefined){
-              if(createVariantProduct.productVariantUpdate.productVariant.id !== undefined){
-                productCreationStatus = true;
-              }
+            const searchProductVariandId = ["productVariantUpdate","productVariant","id"];
+            const productVariantId = await getValue(searchProductVariandId,createVariantProduct);
+            if(productVariantId !== undefined){
+              productCreationStatus = true;
             }
           }else{
             var variable = await productVariableMutationUpdate(
               relationship.shopifyReference,
               item.description,
               (item.is_inventory == 1) ? true : false,
-              "ACTIVE",
-              [],
               item.name,
               [],
-              "",
               item.type,
-              [
-                images
-              ],
-              [categoryRelation.shopifyReference],
-              []
+              images,
+              [categoryRelation.shopifyReference]
             );
   
             var updateProduct = await graphQLClient(productUpdateMutation,variable);
@@ -783,6 +711,118 @@ const getCloudbizLocationArray = async(token,cant = 1) => {
     return locations;
   }catch(err){
     console.log(err);
+  }
+}
+
+const getCloudbizProductInfoBasic = async item => {
+  try{
+    var productData = {};
+    //Verificar la categoría o colección del producto
+    var categoryRelation = await getCollectionRelationship(null,item.category.id);
+    var collections = [];
+    if(categoryRelation != undefined){
+      collections.push(categoryRelation.shopifyReference);
+    }
+    //Crear variable de creación de imagén del producto
+    var images = [];
+    if(item.image != "" || item.image != undefined || item.image != null){
+      var image = await productImageVariableMutationCreate(item.name,item.image);
+      images.push(image);
+    }
+    var totalPrice = 0.0;
+    //Obtener el precio por defecto del producto en cloudbiz
+    var price = item.prices.filter(price => {
+      if(price.price_list.is_default == 1){
+        return price;
+      }
+    });
+    //verificar si el producto tiene impuestos aplicados
+    var taxable = (item.taxes.length > 0) ? true : false;
+    //Verificar si el precio del producto tiene incluido el impuesto en su total
+    var taxIncluded = (price.with_tax == 1) ? true : false;
+
+    //Incluir o no el impuesto en el precio del producto
+    if(taxIncluded){
+      totalPrice = price.price*1.15;
+    }else{
+      totalPrice = price.price;
+    }
+    //para establecer el precio de costo del producto
+    var inventory = await productInventoryItemInput(item.inventory.cost_price,true);
+    //para establecer la cantidad de inventario del producto
+    var bodega = [];
+    item.inventory.warehouses.forEach(async warehouse => {
+      var location = await getLocationRelationship(null,warehouse.warehouse_id);
+      var inventoryLevelInput = await productInventoryQuantitiesInput(warehouse.available_stock,location.shopifyReference);
+      bodega.push(inventoryLevelInput);
+    });
+
+    productData.collections = collections;
+    productData.images = images;
+    productData.totalPrice = totalPrice;
+    productData.inventory = inventory;
+    productData.bodega = bodega;
+    productData.taxable = taxable;
+    productData.sku = item.code;
+    productData.name = item.title;
+    productData.type = item.type;
+    productData.description = item.description;
+    productData.published = (item.is_inventory == 1) ? true : false;
+    productData.status = "ACTIVE";
+
+    return productData;
+  }catch(error){
+    console.error(error)
+  }
+}
+
+const createProductVariable = async (productData,variants) => {
+  try{
+    var productName = productData.name.split(" - ");
+    var productVariable = await productVariableMutationCreate(
+      productData.description,
+      productData.published,
+      productName[0],
+      variants,
+      productData.type,
+      productData.images,
+      productData.collections
+    );
+
+    return productVariable;
+  }catch(error){
+    console.error(error)
+  }
+}
+
+const createProductVariantVariable = async (productData,isPrincipal = false) => {
+  try{
+    var productVariant = {};
+    if(!isPrincipal){
+      productVariant = await productVariantVariableMutationCreate(
+        productData.sku,
+        productData.taxable,
+        productData.name,
+        productData.totalPrice,
+        productData.inventory,
+        productData.bodega,
+        productData.images[0].originalSource
+      );
+    }else{
+      productVariant = await productVariantVariableMutationCreate(
+        productData.sku,
+        productData.taxable,
+        "Default Title",
+        productData.totalPrice,
+        productData.inventory,
+        productData.bodega,
+        productData.images[0].originalSource
+      );
+    }
+
+    return productVariant;
+  }catch(error){
+    console.error(error)
   }
 }
 

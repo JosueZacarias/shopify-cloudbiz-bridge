@@ -270,8 +270,26 @@ const getAllShopifyLocations = gql`query ($cant: Int, $cursor: String){
   }
 }`;
 
-const getAllProductVariantsByProduct = gql`query(){
-
+const getAllProductVariantsByProduct = gql`query($id: ID, $cant: Int!){
+  product(id:$id) {
+    id
+    variants(first:$cant){
+      edges{
+        node{
+          id
+          inventoryItem{
+            inventoryLevels(first: 1){
+              edges{
+                node{
+                  id
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }`
 
 const getCustomerVipTypeByNameQuery = gql`query ($query: String){
@@ -360,5 +378,7 @@ module.exports = {
 
   getProductsLocations,
   getProductsCollections,
-  getProductInventoryId
+  getProductInventoryId,
+
+  getAllProductVariantsByProduct
 };

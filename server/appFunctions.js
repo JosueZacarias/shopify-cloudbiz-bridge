@@ -171,6 +171,11 @@ const imageResize = (imageUrl,w,h) => {
   }
 }
 
+const getValue = async (arr, obj)  => {
+  const [first, ...rest] = arr;
+  return typeof(obj[first]) === "object" ? getValue(rest, obj[first]) : obj[first];
+}
+
 module.exports = {
   getPDF,
   getToken,
@@ -181,5 +186,6 @@ module.exports = {
   verifyCustomerVIPType,
   createCustomerVIPType,
   pad,
-  imageResize
+  imageResize,
+  getValue
 };

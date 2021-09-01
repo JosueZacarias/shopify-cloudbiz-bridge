@@ -96,9 +96,16 @@ const productLocation = async (id,cant) => {
     "cant":cant
   }
   return variables;
-
 }
 const productCollection = async (id,cant) => {
+  const variables = {
+    "id":id,
+    "cant":cant
+  }
+  return variables;
+}
+
+const specificElementWithCant = async (id,cant) => {
   const variables = {
     "id":id,
     "cant":cant
@@ -161,17 +168,18 @@ const customerVariableMutationDelete = async(id) => {
   }
 };
 
-const productVariableMutationCreate = async(descriptionHtml,
-                                    published,
-                                    status,
-                                    tags,
-                                    title,
-                                    variants,
-                                    vendor,
-                                    productType,
-                                    images,
-                                    collectionsToJoin,
-                                    collectionsToLeave) => {
+const productVariableMutationCreate = async (
+                                              descriptionHtml,
+                                              published,
+                                              title,
+                                              variants,
+                                              productType,
+                                              images,
+                                              collectionsToJoin,
+                                              collectionsToLeave = [],
+                                              status = "ACTIVE",
+                                              tags = []
+                                            ) => {
   let input = {
     "input":{
       "descriptionHtml":descriptionHtml,
@@ -180,7 +188,6 @@ const productVariableMutationCreate = async(descriptionHtml,
       "tags":tags,
       "title":title,
       "variants":variants,
-      "vendor":vendor,
       "productType":productType,
       "collectionsToJoin":collectionsToJoin,
       "collectionsToLeave":collectionsToLeave
@@ -190,7 +197,19 @@ const productVariableMutationCreate = async(descriptionHtml,
   return input;
 };
 
-const productVariableMutationUpdate = async(id,descriptionHtml,published,status,tags,title,variants,vendor,productType,images,collectionsToJoin,collectionsToLeave) => {
+const productVariableMutationUpdate = async (  
+                                              id,
+                                              descriptionHtml,
+                                              published,
+                                              title,
+                                              variants,
+                                              productType,
+                                              images,
+                                              collectionsToJoin,
+                                              collectionsToLeave = [],
+                                              status = "ACTIVE",
+                                              tags = []
+                                            ) => {
   let input = {
     "id": id,
     "descriptionHtml":descriptionHtml,
@@ -199,7 +218,6 @@ const productVariableMutationUpdate = async(id,descriptionHtml,published,status,
     "tags":tags,
     "title":title,
     "variants":variants,
-    "vendor":vendor,
     "productType":productType,
     "images":images,
     "collectionsToJoin":collectionsToJoin,
@@ -208,7 +226,7 @@ const productVariableMutationUpdate = async(id,descriptionHtml,published,status,
   return input;
 };
 
-const inventoryAdjustQuantity = async(inventoryLevelId,availableDelta) => {
+const inventoryAdjustQuantity = async (inventoryLevelId,availableDelta) => {
   let variable = {
     "input":{
       "inventoryLevelId": inventoryLevelId,
@@ -218,7 +236,7 @@ const inventoryAdjustQuantity = async(inventoryLevelId,availableDelta) => {
   return variable;
 }
 
-const productVariableMutationDelete = async(id) => {
+const productVariableMutationDelete = async (id) => {
   return {
     "input": {
       "id": id
@@ -226,7 +244,7 @@ const productVariableMutationDelete = async(id) => {
   }
 };
 
-const productMediaVariableMutationCreate = async(productId,alt,sourceUrl) =>{
+const productMediaVariableMutationCreate = async (productId,alt,sourceUrl) =>{
   return {
     "productId": productId,
     "media":[{
@@ -237,7 +255,7 @@ const productMediaVariableMutationCreate = async(productId,alt,sourceUrl) =>{
   }
 }
 
-const productImageVariableMutationCreate = async(alt,sourceUrl) => {
+const productImageVariableMutationCreate = async (alt,sourceUrl) => {
   return {
     "alt": alt,
     "mediaContentType": "IMAGE",
@@ -245,20 +263,20 @@ const productImageVariableMutationCreate = async(alt,sourceUrl) => {
   }
 };
 
-const productVariantVariableMutationCreate = async ( productId,
-                                                    sku,
-                                                    taxCode,
-                                                    taxable,
-                                                    title,
-                                                    price,
-                                                    compareAtPrice,
-                                                    inventoryItem,
-                                                    inventoryQuantities,
-                                                    imageId
+const productVariantVariableMutationCreate = async (
+                                                      sku,
+                                                      taxable,
+                                                      title,
+                                                      price,
+                                                      inventoryItem,
+                                                      inventoryQuantities,
+                                                      imageSrc,
+                                                      productId = null,
+                                                      taxCode = null,
+                                                      compareAtPrice = null
                                                     ) => {
-  let input = {
+  let variable = {
     "input":{
-      "productId":productId,
       "sku":sku,
       "taxCode":taxCode,
       "taxable":taxable,
@@ -269,22 +287,26 @@ const productVariantVariableMutationCreate = async ( productId,
       "inventoryQuantities": inventoryQuantities,
       "inventoryManagement": "SHOPIFY",
       "inventoryPolicy": "DENY",
-      "imageId": imageId
+      "imageSrc": imageSrc
     }
   }
-  return input;
+  if(productId !== null){
+    variable.input.productId = productId;
+  }
+  return variable;
 };
 
-const productVariantVariableMutationUpdate = async( id,
-                                                    sku,
-                                                    taxCode,
-                                                    taxable,
-                                                    title,
-                                                    price,
-                                                    compareAtPrice,
-                                                    imageSrc,
-                                                    inventoryItem,
-                                                    status = "ACTIVE"
+const productVariantVariableMutationUpdate = async ( 
+                                                      id,
+                                                      sku,
+                                                      taxable,
+                                                      title,
+                                                      price,
+                                                      imageSrc,
+                                                      inventoryItem,
+                                                      status = "ACTIVE",
+                                                      taxCode = null,
+                                                      compareAtPrice = null
                                                     ) => {
   let input = {
     "input":{
@@ -589,5 +611,7 @@ module.exports = {
   productCollection,
 
   inventoryAdjustQuantity,
-  productInventory
+  productInventory,
+
+  specificElementWithCant
 }
