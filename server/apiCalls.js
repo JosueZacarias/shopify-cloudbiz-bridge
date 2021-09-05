@@ -239,7 +239,7 @@ const verifyProductsChangesOnCloudbiz = async() => {
     var firestoreProductsCount = firestoreProductsCreated.length;
 
     //Datos de productos en Cloudbiz
-    var cloudbizProducts = await getCloudbizProductsArray(token);
+    var cloudbizProducts = await getCloudbizProductsArray(token,cant);
     var cloudbizProductsCount = cloudbizProducts.length;
 
     var shopifyProducts = await getShopifyProductsArray(cant,cursor);
@@ -276,24 +276,33 @@ const verifyProductsChangesOnCloudbiz = async() => {
       });
       arrayProductVariantGroup[productId] = group;
     })
-
-    if(cloudbizProductsCount > firestoreProductsCount && cloudbizProductsCount > shopifyProductsCount){
+    var status = true;
+    //if(cloudbizProductsCount > firestoreProductsCount && cloudbizProductsCount > shopifyProductsCount){
+    if(status){
+      console.log("Creacion");
       await Promise.all(cloudbizProducts.map(async item => {
         if(item.type === "product"){
-          const principalProductData = await getCloudbizProductInfoBasic(item);
+          const principalProductData = async item => {
+            var data = await getCloudbizProductInfoBasic(item);
+            return data;
+          }
+          //const principalProductData = await getCloudbizProductInfoBasic(item);
           const index = item.id;
           var variantsArray = [];
 
           if(arrayProductVariantGroup.length > 0){
+            const getVariantsArray = async (arrayProductVariantGroup,index) => {
+
+            }
             await Promise.all(arrayProductVariantGroup[index].map(async productData => {
               var variantProductData = await getCloudbizProductInfoBasic(productData);
               var variableObject = await createProductVariantVariable(variantProductData);
               variantsArray.push(variableObject);
             }));
           }
-
+          console.log(variantsArray);
           if(variantsArray.length === 0 ){
-            var variableObject = await createProductVariantVariable(principalProductData,true);
+            var variableObject = await createProductVariantVariable(principalProductData,3);
             variantsArray.push(variableObject);
           }
 
@@ -329,89 +338,65 @@ const verifyProductsChangesOnCloudbiz = async() => {
       }));
     }else if(cloudbizProductsCount == firestoreProductsCount && cloudbizProductsCount == shopifyProductsCount){
       //Identificar productos provenientes de cloudbiz con variantes
+      console.log("Actualizacion");
       await Promise.all(cloudbizProducts.map(async item => {
         if(item.type === "product"){
-          const principalProductData = await getCloudbizProductInfoBasic(item);
+          var principalProductData = await getCloudbizProductInfoBasic(item);
           const index = item.id;
-          var variantsArray = [];
-
           var relationship = await getProductRelationship(null,null,index);
-
-          if(arrayProductVariantGroup.length > 0){
-            await Promise.all(arrayProductVariantGroup[index].map(async productData => {
-              var variantProductData = await getCloudbizProductInfoBasic(productData);
-              var variableObject = await createProductVariantVariable(variantProductData);
-              variantsArray.push(variableObject);
+          principalProductData.id = relationship.shopifyVariantReference;
+          var productVariantVariable = await createProductVariantVariable(principalProductData,2);
+          var createVariantProduct = await graphQLClient(productVariantUpdate,productVariantVariable);
+          const searchProductVariandId = ["productVariantUpdate","productVariant","id"];
+          const productVariantId = await getValue(searchProductVariandId,createVariantProduct);
+          if(productVariantId !== undefined){
+            //para establecer la cantidad de inventario del producto
+            await Promise.all(item.inventory.warehouses.map(async warehouse => {
+              var location = await getLocationRelationship(null,warehouse.warehouse_id);
+              var variableInventoryLevelId = await productInventory(relationship.shopifyVariantReference,location.shopifyReference);
+              var resultInventoryLevelId = await graphQLClient(getProductInventoryId,variableInventoryLevelId);
+              if(resultInventoryLevelId != undefined){
+                const searchInventoryLevelId = ["productVariant","inventoryItem","inventoryLevel","id"];
+                inventoryLevelId = await getValue(searchInventoryLevelId,resultInventoryLevelId);
+                if(inventoryLevelId !== undefined){
+                  var variableUpdate = await inventoryAdjustQuantity(inventoryLevelId,warehouse.available_stock);
+                  var resultInventoryUpdate = await graphQLClient(productVariantInventoryUpdate,variableUpdate);
+                  if(resultInventoryUpdate !== undefined){
+                    productCreationStatus = true;
+                  }
+                }
+              }
             }));
           }
-
-          if(variantsArray.length === 0 ){
-            var variableObject = await createProductVariantVariable(principalProductData);
-            variantsArray.push(variableObject);
-          }
-          
-          if(RegexVariants.test(item.name)){
-            var variable = await productVariantVariableMutationUpdate(
-              relationship.shopifyVariantReference,
-              item.code,
-              taxable,
-              item.title,
-              totalPrice,
-              item.image,
-              inventory
-            );
-            var createVariantProduct = await graphQLClient(productVariantUpdate,variable);
-            const searchProductVariandId = ["productVariantUpdate","productVariant","id"];
-            const productVariantId = await getValue(searchProductVariandId,createVariantProduct);
-            if(productVariantId !== undefined){
-              productCreationStatus = true;
-            }
-          }else{
-            var variable = await productVariableMutationUpdate(
-              relationship.shopifyReference,
-              item.description,
-              (item.is_inventory == 1) ? true : false,
-              item.name,
-              [],
-              item.type,
-              images,
-              [categoryRelation.shopifyReference]
-            );
-  
-            var updateProduct = await graphQLClient(productUpdateMutation,variable);
-            if(updateProduct.productUpdate.product.id != undefined){
-              var createVariantProduct = await graphQLClient(productVariantCreate,productVariant);
-              if(createVariantProduct !== undefined){
-                if(createVariantProduct.productVariantCreate.productVariant.id !== undefined){
-                  productCreationStatus = true;
-                }
-              }
-            }
-          }
-          //para establecer la cantidad de inventario del producto
-          await Promise.all(item.inventory.warehouses.map(async warehouse => {
-            var location = await getLocationRelationship(null,warehouse.warehouse_id);
-            var variableInventoryLevelId = await productInventory(relationship.shopifyVariantReference,location.shopifyReference);
-            var resultInventoryLevelId = await graphQLClient(getProductInventoryId,variableInventoryLevelId);
-            if(resultInventoryLevelId){
-              inventoryLevelId = resultInventoryLevelId.productVariant.inventoryItem.inventoryLevel.id;
-              if(inventoryLevelId !== undefined){
-                var variableUpdate = await inventoryAdjustQuantity(inventoryLevelId,warehouse.available_stock);
-                var resultInventoryUpdate = await graphQLClient(productVariantInventoryUpdate,variableUpdate);
-                if(resultInventoryUpdate && productCreationStatus){
-                  productCreationStatus = true;
-                }
-              }
-            }
-          }));
         }
       }));
     }else if(cloudbizProductsCount < firestoreProductsCount && cloudbizProductsCount < shopifyProductsCount){
-
+      console.log("eliminacion")
+      var deletedProduct = [];
+      firestoreProductsCreated.forEach(product => {
+        var find = cloudbizProducts.find(prod => {
+          return prod.id == product.data.cloudbizReference;
+        });
+        if(find === undefined){
+          deletedProduct.push(product);
+        }
+      });
+      if(deletedProduct.length > 0){
+        await Promise.all(deletedProduct.map(async deleted => {
+          var variables = await productVariableMutationDelete(deleted.data.shopifyReference);
+          var query = await graphQLClient(productDeleteMutation,variables);
+          const searchDeletedProductId = ["productDelete","deletedProductId"];
+          const deletedProductId = await getValue(searchDeletedProductId,query);
+          if(deletedProductId != undefined){
+            await deleteCollectionRelationship(deletedProductId,null);
+            productCreationStatus = true;
+          }          
+        }));
+      }
     }
     return productCreationStatus;
   }catch(err){
-    console.log(err);
+    console.error(err);
   }
 };
 
@@ -517,18 +502,21 @@ const getShopifyProductsArray = async (cant,cursor,variable = null) => {
     }
     var shopifyProductVariants = [];
     var shopifyProductsQuery = await graphQLClient(getAllShopifyProducts,variable);
-    var haveMore = shopifyProductsQuery.products.pageInfo.hasNextPage;
-    var shopifyProducts = [...shopifyProductsQuery.products.edges];
-    shopifyProducts.map((product) => {
-      shopifyProductVariants.push(...product.node.variants.edges);
-    })
-    if(haveMore){
-      cant += 10;
-      var lastElement = shopifyProducts.pop();
-      cursor = lastElement.cursor;
-      variable = await productsAll(cant,cursor);
-      var products = await getShopifyProductsArray(cant,cursor,variable);
-      shopifyProductVariants.concat(products);
+    if(shopifyProductsQuery !== undefined){
+      const searchHaveMore = ["products","pageInfo","hasNextPage"];
+      const haveMore = await getValue(searchHaveMore,shopifyProductsQuery);
+      var shopifyProducts = [...shopifyProductsQuery.products.edges];
+      shopifyProducts.map((product) => {
+        shopifyProductVariants.push(...product.node.variants.edges);
+      })
+      if(haveMore){
+        cant += 10;
+        var lastElement = shopifyProducts.pop();
+        cursor = lastElement.cursor;
+        variable = await productsAll(cant,cursor);
+        var products = await getShopifyProductsArray(cant,cursor,variable);
+        shopifyProductVariants.concat(products);
+      }
     }
 
     return shopifyProductVariants;
@@ -674,23 +662,25 @@ const getCloudbizProductsArray = async(token,cant = 1) => {
       'deleted_at'
     ];
     var getProducts = await getAllCloudbizProducts(token,cant);
-    var productsCount = getProducts.pop().rows;
-    if(productsCount > cant){
-      getProducts = await getAllCloudbizProducts(token,productsCount);
-      getProducts.pop();
-      getProducts = [...getProducts];
-      products = getProducts.map((item) => {
-        noNeedFields.forEach((key) => {
-          delete item[key];
+    if(getProducts !== undefined){
+      var productsCount = getProducts.pop().rows;
+      if(productsCount > cant){
+        getProducts = await getAllCloudbizProducts(token,productsCount);
+        getProducts.pop();
+        getProducts = [...getProducts];
+        products = getProducts.map((item) => {
+          noNeedFields.forEach((key) => {
+            delete item[key];
+          });
+          var keys = Object.keys(item);
+          keys.forEach(key => {
+            if(item[key] == null){
+              item[key] = "";
+            }
+          });
+          return item;
         });
-        var keys = Object.keys(item);
-        keys.forEach(key => {
-          if(item[key] == null){
-            item[key] = "";
-          }
-        });
-        return item;
-      });
+      }
     }
     return products;
   }catch(err){
@@ -795,31 +785,47 @@ const createProductVariable = async (productData,variants) => {
   }
 }
 
-const createProductVariantVariable = async (productData,isPrincipal = false) => {
+const createProductVariantVariable = async (productData,type = 1) => {
   try{
     var productVariant = {};
-    if(!isPrincipal){
-      productVariant = await productVariantVariableMutationCreate(
-        productData.sku,
-        productData.taxable,
-        productData.name,
-        productData.totalPrice,
-        productData.inventory,
-        productData.bodega,
-        productData.images[0].originalSource
-      );
-    }else{
-      productVariant = await productVariantVariableMutationCreate(
-        productData.sku,
-        productData.taxable,
-        "Default Title",
-        productData.totalPrice,
-        productData.inventory,
-        productData.bodega,
-        productData.images[0].originalSource
-      );
+    switch(type){
+      //Creacion
+      case 1:
+        productVariant = await productVariantVariableMutationCreate(
+          productData.sku,
+          productData.taxable,
+          productData.name,
+          productData.totalPrice,
+          productData.inventory,
+          productData.bodega,
+          productData.images[0].originalSource
+        );
+        break;
+      //Actualizacion
+      case 2:
+        productVariant = await productVariantVariableMutationUpdate(
+          productData.id,
+          productData.sku,
+          productData.taxable,
+          productData.name,
+          productData.totalPrice,
+          productData.images[0].originalSource,
+          productData.inventory
+        );
+        break;
+      //Producto Principal por lo tanto el titulo es el titulo por defecto
+      default:
+        productVariant = await productVariantVariableMutationCreate(
+          productData.sku,
+          productData.taxable,
+          "Default Title",
+          productData.totalPrice,
+          productData.inventory,
+          productData.bodega,
+          productData.images[0].originalSource
+        );
+        break;
     }
-
     return productVariant;
   }catch(error){
     console.error(error)

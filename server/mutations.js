@@ -75,9 +75,6 @@ const productUpdateMutation = gql`mutation ($input: ProductInput!) {
 const productDeleteMutation = gql`mutation ($input: ProductDeleteInput!) {
   productDelete(input: $input) {
     deletedProductId
-    shop {
-      id
-    }
     userErrors {
       field
       message

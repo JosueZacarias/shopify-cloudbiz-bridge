@@ -36,7 +36,7 @@ const {
   productCollection
 } = require('./variables.js');
 
-const { graphQLClient, imageResize } = require('./appFunctions');
+const { graphQLClient, imageResize, getValue } = require('./appFunctions');
 const { productCreateMutation } = require('./mutations.js');
 
 global.Headers = global.Headers || Headers;
@@ -499,9 +499,15 @@ const deleteProduct = async (ctx,token) => {
 
 const getProductVariantUnitCost = async (productVariantID) => {
   try{
+    var unitCost = 0.00;
     const variables = await productVariantVariableQuery(productVariantID);
     var productVariantInfo = await graphQLClient(getProductVariantByIDQuery,variables);
-    const unitCost = parseFloat(productVariantInfo.productVariant.inventoryItem.unitCost.amount);
+    if(productVariantInfo !== undefined){
+      console.log(productVariantInfo);
+      const searchAmount = ["productVariant","inventoryItem","unitCost","amount"];
+      unitCost = await getValue(searchAmount,productVariantInfo);
+      unitCost = (unitCost !== undefined) ? parseFloat(unitCost):0.00;
+    }
     return unitCost;
   }catch(err){
     console.log(err);

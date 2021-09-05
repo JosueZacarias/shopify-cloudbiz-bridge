@@ -173,7 +173,11 @@ const imageResize = (imageUrl,w,h) => {
 
 const getValue = async (arr, obj)  => {
   const [first, ...rest] = arr;
-  return typeof(obj[first]) === "object" ? getValue(rest, obj[first]) : obj[first];
+  if(obj !== null){
+    return typeof(obj[first]) === "object" && typeof(obj[first]) !== null ? getValue(rest, obj[first]) : obj[first];
+  }else{
+    return undefined;
+  }
 }
 
 module.exports = {
