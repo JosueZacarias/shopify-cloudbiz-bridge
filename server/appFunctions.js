@@ -4,7 +4,7 @@ const axios = require('axios');
 const Jimp = require('jimp');
 const HTMLToPDF = require('convert-html-to-pdf').default;
 const { GraphQLClient } = require('graphql-request');
-const { getCustomerVIPType, insertCustomerVIPType, deleteCustomerVIPType } = require('./firestoreQuery.js');
+const { getCustomerVIPType, insertCustomerVIPType } = require('./firestoreQuery.js');
 
 const verifyCustomerVIPType = async (tag) => {
   try{
@@ -145,7 +145,7 @@ const getInvoiceWithId = async (token,invoiceId) => {
 //Consultas de datos a SHOPIFY
 const graphQLClient = async (query,variables) => {
   try{
-    const graphqlQuery = new GraphQLClient(`https://${process.env.SHOP_NAME}/admin/api/2021-04/graphql.json`,{
+    const graphqlQuery = new GraphQLClient(`https://${process.env.SHOP_NAME}/admin/api/2021-07/graphql.json`,{
       headers: {
         'Content-Type': 'application/json',
         'X-Shopify-Access-Token': process.env.ACCESS_TOKEN_SHOPIFY
@@ -154,7 +154,7 @@ const graphQLClient = async (query,variables) => {
     const queryData = await graphqlQuery.request(query,variables);
     return queryData;
   }catch(err){
-    console.log("ocurrió un error: "+err);
+    console.error("ocurrió un error: "+err);
   }
 };
 
@@ -171,13 +171,27 @@ const imageResize = (imageUrl,w,h) => {
   }
 }
 
-const getValue = async (arr, obj)  => {
+const getValue = (arr, obj)  => {
   const [first, ...rest] = arr;
   if(obj !== null){
-    return typeof(obj[first]) === "object" && typeof(obj[first]) !== null ? getValue(rest, obj[first]) : obj[first];
+    return typeof(obj[first]) === "object" ? getValue(rest, obj[first]) : obj[first];
   }else{
     return undefined;
   }
+}
+
+const getCloudbizParams = totalCount => {
+  const params = {};
+  const limit = 500;
+  if(totalCount > limit){
+    var pages = Math.trunc(totalCount / limit);
+    var morePage = totalCount % limit;
+    if(morePage > 0 ){
+      pages += 1;
+    }
+    params.totalPagesLeft = pages - 1;
+  }
+  return params;
 }
 
 module.exports = {
@@ -191,5 +205,6 @@ module.exports = {
   createCustomerVIPType,
   pad,
   imageResize,
-  getValue
+  getValue,
+  getCloudbizParams
 };

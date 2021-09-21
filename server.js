@@ -116,6 +116,10 @@ app.prepare().then(() => {
   router.get("(/_next/static/.*)", handleRequest); // Static content is clear
   router.get("/_next/webpack-hmr", handleRequest); // Webpack content is clear
   router.get("(.*)", verifyRequest(), handleRequest); // Everything else must have sessions
+  // router.get("/",(req,res) => {
+  //   res.header = {"Content-type":"text/html"};
+  //   res.body = {}
+  // })
 
   server.use(router.allowedMethods());
   server.use(router.routes());
@@ -129,11 +133,9 @@ app.prepare().then(() => {
   server.listen(port, () => {
     console.log(`> Ready on http://localhost:${port}`);
       try{
-        const mseg = 180000;
-        const runRequest = async () => {
-          await updateDataFromCloudbiz();
-        }
-        setInterval(() => runRequest() ,mseg);
+        const mseg = 10000;
+        //updateDataFromCloudbiz()
+        //setInterval(() => updateDataFromCloudbiz() ,mseg);
       }
       catch(err){
         console.log(err);

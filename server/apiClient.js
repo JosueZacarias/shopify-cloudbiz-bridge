@@ -41,9 +41,9 @@ const { productCreateMutation } = require('./mutations.js');
 
 global.Headers = global.Headers || Headers;
 
-/**************************************/
-/*********      CLIENTES      *********/
-/**************************************/
+/**************************/
+/*********CLIENTES*********/
+/**************************/
 //consultar cliente con correo electrónico
 const getCustomerIdWithEmail = async (token,email) => {
   try{
@@ -64,49 +64,43 @@ const getCustomerIdWithEmail = async (token,email) => {
 };
 //Crear cliente en cloudBiz
 const createCustomer = async (ctx,token) => {
+  const customerData = {...ctx.request.body};
   var city = '';
   var address = '';
   var phone_1 = '';
   var createCustomerStatus = false;
   try{
-    const exists = await getCustomerRelationship(ctx.request.body.admin_graphql_api_id,null);
+    const exists = await getCustomerRelationship(customerData.admin_graphql_api_id,null);
     if(exists === undefined){
-      if(ctx.request.body.addresses.length > 0){
-        city = ctx.request.body.addresses[0]['city'];
-        address = ctx.request.body.addresses[0]['address1'];
-        phone_1 = ctx.request.body.addresses[0]['phone'];
+      if(customerData.addresses.length > 0){
+        city = customerData.addresses[0]['city'];
+        address = customerData.addresses[0]['address1'];
+        phone_1 = customerData.addresses[0]['phone'];
       };
-      var customerData = {
+      var customerDataObject = {
         is_active : 1,
         seller_id: null,
         discount_id: null,
-        is_tax_exempt: (ctx.request.body.tax_exempt)?1:0,
+        is_tax_exempt: (customerData.tax_exempt) ? 1 : 0,
         is_client: 1,
         is_vendor: 0,
         balance_in_favor: 0,
-        full_name: ctx.request.body.first_name+' '+ ctx.request.body.last_name,
+        full_name: customerData.first_name+' '+ customerData.last_name,
         tax_number: '',
-        email: ctx.request.body.email,
+        email: customerData.email,
         city: city,
         address: address,
         phone_1: phone_1,
         phone_2: null,
-        mobile_phone: ctx.request.body.phone,
-        notes: ctx.request.body.note,
+        mobile_phone: customerData.phone,
+        notes: customerData.note,
         persons: []
       };
-      const resp = await fetch('https://api.micloudbiz.com/v1/contact',{
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'token': token
-          },
-          body:JSON.stringify(customerData)
-        }
-      );
-      const response = await resp.json();
-      if(response){
-        await insertCustomerRelationship(ctx.request.body.admin_graphql_api_id,response.id);
+      const createCustomerUrl = `https://api.micloudbiz.com/v1/contact`;
+      const methodType= 'POST';
+      const cloudbizResponse = await sendCloudbizRequest(createCustomerUrl,methodType,token,customerDataObject);
+      if(cloudbizResponse){
+        await insertCustomerRelationship(customerData.admin_graphql_api_id,cloudbizResponse.id);
         createCustomerStatus = true;
       }
     }else{
@@ -121,50 +115,50 @@ const createCustomer = async (ctx,token) => {
 };
 //Actualizar datos del cliente en cloudBiz
 const updateCustomer = async (ctx,token) => {
+  const customerData = {...ctx.request.body};
   var city = '';
   var address = '';
   var phone_1 = '';
+  var customerUpdateStatus = false;
   try{
-    shopifyCustomerID = ctx.request.body.admin_graphql_api_id;
+    shopifyCustomerID = customerData.admin_graphql_api_id;
     const customerReference = await getCustomerRelationship(shopifyCustomerID,null);
-    if(customerReference){
+    if(customerReference !== undefined){
       const contactID = customerReference.cloudbizReference.toString()
-      if(ctx.request.body.addresses.length > 0){
-        city = ctx.request.body.addresses[0]['city'];
-        address = ctx.request.body.addresses[0]['address1'];
-        phone_1 = ctx.request.body.addresses[0]['phone'];
+      if(customerData.addresses.length > 0){
+        city = customerData.addresses[0]['city'];
+        address = customerData.addresses[0]['address1'];
+        phone_1 = customerData.addresses[0]['phone'];
       };
-      var customerData = {
+      var customerDataObject = {
         is_active : 1,
         seller_id: null,
         discount_id: null,
         is_client: 1,
         is_vendor: 0,
         balance_in_favor: 0,
-        is_tax_exempt: (ctx.request.body.tax_exempt)?1:0,
-        full_name: ctx.request.body.first_name+' '+ ctx.request.body.last_name,
+        is_tax_exempt: (customerData.tax_exempt)?1:0,
+        full_name: customerData.first_name+' '+ customerData.last_name,
         tax_number: '',
-        email: ctx.request.body.email,
+        email: customerData.email,
         city: city,
         address: address,
         phone_1: phone_1,
         phone_2: null,
-        mobile_phone: ctx.request.body.phone,
-        notes: ctx.request.body.note,
+        mobile_phone: customerData.phone,
+        notes: customerData.note,
         persons: []
       };
-      const response = await fetch('https://api.micloudbiz.com/v1/contact/'+contactID,{
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'token': token
-          },
-          body: JSON.stringify(customerData)
-        }
-      );
-      const data = await response.json();
-      return data;
+      const customerUpdateUrl = `https://api.micloudbiz.com/v1/contact/${contactID}`;
+      const methodType = 'PUT';
+      const cloudbizResponse = await sendCloudbizRequest(customerUpdateUrl,methodType,token,customerDataObject);
+      if(cloudbizResponse && cloudbizResponse.id !== undefined){
+        customerUpdateStatus = true;
+      }
+    }else{
+      customerUpdateStatus = await createCustomer(ctx,token);
     }
+    return customerUpdateStatus;
   }
   catch(err){
     console.log(err);
@@ -173,19 +167,15 @@ const updateCustomer = async (ctx,token) => {
 //Eliminar cliente en cloudBiz
 const deleteCustomer = async (ctx,token) => {
   try{
+    const deletedCustomer = {...ctx.request.body};
     var deletedCustomerStatus = false;
-    const shopifyCustomerID = ctx.request.body.admin_graphql_api_id;
+    const shopifyCustomerID = deletedCustomer.admin_graphql_api_id;
     const customerReference = await getCustomerRelationship(shopifyCustomerID,null);
     const contactID = customerReference.cloudbizReference;
-    const response = await fetch('https://api.micloudbiz.com/v1/contact/'+contactID,{
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'token': token
-      }
-    });
-    const data = await response.json();
-    if(data){
+    const customerDeleteUrl = `https://api.micloudbiz.com/v1/contact/${contactID}`;
+    const methodType = 'DELETE';
+    const cloudbizResponse = await sendCloudbizRequest(customerDeleteUrl,methodType,token);
+    if(cloudbizResponse !== undefined){
       await deleteCustomerRelationship(shopifyCustomerID,null);
       deletedCustomerStatus = true;
     }
@@ -227,37 +217,48 @@ const deleteCustomerGroup = async (ctx,token) => {
 /*****************************************/
 
 //Tengo que corregir los datos de los productos que vienen de shopify
-const createInvoice = async (ctx,token,contactID) => {
+const createInvoice = async (ctx,token) => {
   try{
-    if(ctx.request.body.confirmed && ctx.request.body.financial_status == 'paid'){
-      const email = ctx.request.body.email;
+    const invoiceData = {...ctx.request.body};
+    if(invoiceData.confirmed && invoiceData.financial_status == 'paid'){
+      const email = invoiceData.email;
       const subject = 'Factura generado para el cliente: ';
       const emailBody = '<p><b>Su factura ha sido creado</b></p>';
-      var cDate = new Date(ctx.request.body.created_at)
+      const shopifyCustomerID = invoiceData.customer.admin_graphql_api_id;
+      const customerReference = await getCustomerRelationship(shopifyCustomerID,null);
+      var contactID = '59743';//Contacto consumidor final
+      if(customerReference && customerReference.cloudbizReference){
+        contactID = customerReference.cloudbizReference.toString();
+      };
+      var cDate = new Date(invoiceData.created_at);
       var creationDateFormat = cDate.getFullYear()+'-'+(cDate.getMonth()+1)+'-'+cDate.getDate()+' '+cDate.getHours()+':'+cDate.getMinutes()+':'+cDate.getSeconds()+' CST';
       var dueDateFormat = creationDateFormat;
       var items = [];
-      ctx.request.body.line_items.forEach((item, i) => {
+      invoiceData.line_items.forEach((item, i) => {
+        let productVariandID = `gid://shopify/ProductVariant/${item.variant_id}`;
+        const productInfo = await getProductRelationship(null,productVariandID,null);
+        let locationId = `gid://shopify/Location/${item.origin_location.id}`;
+        const locationInfo = await getLocationRelationship(locationId,null);
         items.push({
-          "item_id": item.variant_id,
+          "item_id": productInfo.cloudbizReference,
           "name": item.name,
           "quantity": item.quantity.toString(),
           "price": item.price.toString(),
           "discount_id": 0,
           "discount_rate": 0,
           "conversion_rate": 1,
-          "tax_id": 55,
+          "tax_id": 1125,
           "tax_rate": 0.15,
           "tax_id2": 0,
           "total": (item.quantity*item.price).toString(),
           "notes": null,
-          "is_inventory": "0",
-          "warehouse_id": 31
+          "is_inventory": "1",
+          "warehouse_id": locationInfo.cloudbizReference
         })
       });
       var invoiceData = {
         "contact_id": contactID,
-        "seller_id": null,
+        "seller_id": 'OnlineShopify',
         "is_tax_exempt": "0",
         "currency_id": "56",
         "points": [],
@@ -370,9 +371,9 @@ const updateInvoice = async (ctx,token,contactID,invoiceID) => {
   }
 };
 
-/***************************************/
-/*********      PRODUCTOS      *********/
-/***************************************/
+/***************************/
+/*********PRODUCTOS*********/
+/***************************/
 const createProduct = async (ctx,token) => {
   try{
     const productData = {...ctx.request.body};
@@ -418,7 +419,7 @@ const updateProduct = async (ctx,token) => {
           var product = item.data();
           var productID = product.cloudbizReference;
           var deleteUrl = `https://apinode.micloudbiz.com/gateway-api/v1/item/${productID}`;
-          var data = await sendCloudbizProductRequest(deleteUrl,deleteMethod,token);
+          var data = await sendCloudbizRequest(deleteUrl,deleteMethod,token);
           if(data !== undefined){
             await deleteProductRelationship(null,product.shopifyVariantReference,null);
           }
@@ -430,7 +431,7 @@ const updateProduct = async (ctx,token) => {
           var insertData = await createProductVariantDataToInsert(token,productName,productDescription,item,itemID,false);
           const url = `https://apinode.micloudbiz.com/gateway-api/v1/item/${itemID.cloudbizReference}`;
           const methodType = `PUT`;
-          const response = await sendCloudbizProductRequest(url,methodType,token,insertData);
+          const response = await sendCloudbizRequest(url,methodType,token,insertData);
           if(response !== undefined){
             updateProductStatus = true;
           }
@@ -440,7 +441,7 @@ const updateProduct = async (ctx,token) => {
           var product = item.data();
           var productID = product.cloudbizReference;
           var deleteUrl = `https://apinode.micloudbiz.com/gateway-api/v1/item/${productID}`;
-          var data = await sendCloudbizProductRequest(deleteUrl,deleteMethod,token);
+          var data = await sendCloudbizRequest(deleteUrl,deleteMethod,token);
           if(data !== undefined){
             await deleteProductRelationship(null,product.shopifyVariantReference,null);
           }
@@ -457,7 +458,7 @@ const updateProduct = async (ctx,token) => {
           var insertData = await createProductVariantDataToInsert(token,productName,productDescription,item,itemID,false);
           const url = `https://apinode.micloudbiz.com/gateway-api/v1/item/${itemID.cloudbizReference}`;
           const methodType = `PUT`;
-          const response = await sendCloudbizProductRequest(url,methodType,token,insertData);
+          const response = await sendCloudbizRequest(url,methodType,token,insertData);
           if(response !== undefined){
             updateProductStatus = true;
           }
@@ -503,9 +504,8 @@ const getProductVariantUnitCost = async (productVariantID) => {
     const variables = await productVariantVariableQuery(productVariantID);
     var productVariantInfo = await graphQLClient(getProductVariantByIDQuery,variables);
     if(productVariantInfo !== undefined){
-      console.log(productVariantInfo);
       const searchAmount = ["productVariant","inventoryItem","unitCost","amount"];
-      unitCost = await getValue(searchAmount,productVariantInfo);
+      unitCost = getValue(searchAmount,productVariantInfo);
       unitCost = (unitCost !== undefined) ? parseFloat(unitCost):0.00;
     }
     return unitCost;
@@ -557,19 +557,21 @@ const getProductCollection = async productVariantId => {
   }
 }
 
-const sendCloudbizProductRequest = async(url,methodType,token,productData = '') => {
+const sendCloudbizRequest = async(url,methodType,token,productData = '') => {
   try{
-    var options = {
+    let options = {
       method: methodType,
       headers: {
         'Content-Type': 'application/json',
         'token': token
-      },
-      body: productData === ''?productData:JSON.stringify(productData)
+      }
+    }
+    if(productData !== ''){
+      options.body = JSON.stringify(productData)
     }
     const resp = await fetch(url,options);
-      const response = await resp.json();
-      return response;
+    const response = await resp.json();
+    return response;
   }catch(error){
     console.error(error);
   }
@@ -580,7 +582,7 @@ const createProductVariantOnCloudbiz = async (token,insertData,shopifyProductId,
     var createProductStatus = false;
     const url = `https://apinode.micloudbiz.com/gateway-api/v1/item`;
     const methodType = `POST`;
-    const response = await sendCloudbizProductRequest(url,methodType,token,insertData);
+    const response = await sendCloudbizRequest(url,methodType,token,insertData);
     if(response.id !== undefined){
       const saveProductRelationShip = await insertProductRelationship(shopifyProductId,shopifyVariantId,response.id);
       if(saveProductRelationShip !== undefined){
@@ -1162,9 +1164,9 @@ const getAllCloudbizDiscounts = async (token) => {
   }
 }
 
-const getAllCloudbizProducts = async (token,countRow) => {
+const getAllCloudbizProducts = async (token,page = 1,cant = 500) => {
   try{
-    const response = await fetch('https://apinode.micloudbiz.com/gateway-api/v1/item?page=1&number_result='+countRow+'&requestRowNumber=true',{
+    const response = await fetch(`https://apinode.micloudbiz.com/gateway-api/v1/item?page=${page}&number_result=${cant}&requestRowNumber=true`,{
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -1174,7 +1176,7 @@ const getAllCloudbizProducts = async (token,countRow) => {
     const data = await response.json();
     return data;
   }catch(err){
-      console.log(err);
+      console.error(err);
   }
 }
 

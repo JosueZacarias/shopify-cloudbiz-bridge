@@ -1,0 +1,30 @@
+{
+  "configurations": [
+    {
+      "name": "Cloud Run: Run/Debug Locally",
+      "type": "cloudcode.cloudrun",
+      "request": "launch",
+      "build": {
+        "buildpacks": {
+          "path": "package.json",
+          "builder": "gcr.io/buildpacks/builder:v1"
+        }
+      },
+      "image": "shopify-cloudbiz-bridge",
+      "service": {
+        "name": "shopify-cloudbiz-bridge",
+        "containerPort": 3000,
+        "resources": {
+          "limits": {
+            "memory": "256Mi",
+            "cpu": 1
+          }
+        }
+      },
+      "target": {
+        "minikube": {}
+      },
+      "watch": true
+    }
+  ]
+}

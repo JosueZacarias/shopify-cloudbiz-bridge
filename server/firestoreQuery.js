@@ -57,9 +57,9 @@ const deleteQueryBatch = async (database,query,resolve) => {
 };
 
 
-/**************************************/
-/*********      CLIENTES      *********/
-/**************************************/
+/**************************/
+/*********CLIENTES*********/
+/**************************/
 
 const insertCustomerRelationship = async (shopifyCustomerID,cloudbizCustomerID) => {
   const res = await database.collection('customer').add({
@@ -80,16 +80,16 @@ const insertCustomerVIPTypeRelationship = async (shopifyCustomerVIPID,cloudbizCu
 const getCustomerVIPTypeRelationship = async (shopifyCustomerVIPID,cloudbizCustomerVIPID) => {
   var whereID = 'shopifyReference';
   var searchID = '';
-  if(shopifyCustomerVIP == null){
+  if(shopifyCustomerVIPID == null){
     whereID = 'cloudbizReference';
     searchID = cloudbizCustomerVIPID.toString();
   }else{
-    searchID = cloudbizCustomerVIPID.toString();
+    searchID = shopifyCustomerVIPID.toString();
   }
   const customerRef = database.collection('customerGroup');
   const snapshot = await customerRef.where(whereID, '==', searchID).get();
   if (snapshot.empty) {
-    console.log('No matching documents.');
+    console.log('No se encontró relación de clientes VIP');
     return undefined;
   }
   data = snapshot.docs[0].data();
@@ -108,7 +108,7 @@ const getCustomerRelationship = async (shopifyCustomerID,cloudbizProductID) => {
   const customerRef = database.collection('customer');
   const snapshot = await customerRef.where(whereID, '==', searchID).get();
   if (snapshot.empty) {
-    console.log('No matching documents.');
+    console.log('No se encontró registro de clientes en base de datos');
     return undefined;
   }
   data = snapshot.docs[0].data();
@@ -120,7 +120,7 @@ const deleteCustomerRelationship = async (shopifyCustomerID,cloudbizCustomerID) 
   var searchID = '';
   if(shopifyCustomerID == null){
     whereID = 'cloudbizReference';
-    searchID = cloudbizProductID.toString();
+    searchID = cloudbizCustomerID.toString();
   }else{
     searchID = shopifyCustomerID.toString();
   }

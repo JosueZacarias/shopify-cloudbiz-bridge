@@ -1,11 +1,12 @@
-FROM node:14
+FROM node:14.17.1
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+COPY . ./
 
 RUN npm install --only=production
 
-COPY . ./
+RUN npm run build
 
-CMD [ "node", "server.js" ]
+
+CMD [ "npm", "run", "start" ]

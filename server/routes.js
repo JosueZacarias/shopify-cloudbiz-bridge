@@ -54,7 +54,7 @@ customRouter.get('/api/v1/invoice/getInvoice',
   }
 );
 
-customRouter.post('/api/v1/customer/createCustomer',
+customRouter.post('/api/v1/customer/create',
   async (ctx) => {
     //Consulta servicio para obtener token de acceso a cloudbiz
     ctx.res.statusCode = 200;
@@ -68,7 +68,7 @@ customRouter.post('/api/v1/customer/createCustomer',
   }
 );
 
-customRouter.post('/api/v1/customer/updateCustomer',
+customRouter.post('/api/v1/customer/update',
     async (ctx) => {
       ctx.res.statusCode = 200;
       const email = ctx.request.body.email;
@@ -82,7 +82,7 @@ customRouter.post('/api/v1/customer/updateCustomer',
     }
 );
 
-customRouter.post('/api/v1/customer/deleteCustomer',
+customRouter.post('/api/v1/customer/delete',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -95,10 +95,11 @@ customRouter.post('/api/v1/customer/deleteCustomer',
   }
 );
 
-customRouter.post('/api/v1/invoice/createInvoice',
+customRouter.post('/api/v1/invoice/create',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
+    const response = await createInvoice(ctx,token);
     const email = ctx.request.body.email;
     const subject = 'Factura generado para el cliente: ';
     const emailBody = '<p><b>Su factura ha sido creado</b></p>';
@@ -186,7 +187,7 @@ customRouter.post('/api/v1/invoice/createInvoice',
   }
 );
 
-customRouter.post('/api/v1/inventory/createProduct',
+customRouter.post('/api/v1/product/create',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -199,7 +200,7 @@ customRouter.post('/api/v1/inventory/createProduct',
   }
 );
 
-customRouter.post('/api/v1/inventory/updateProduct',
+customRouter.post('/api/v1/product/update',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -212,7 +213,7 @@ customRouter.post('/api/v1/inventory/updateProduct',
   }
 );
 
-customRouter.post('/api/v1/inventory/deleteProduct',
+customRouter.post('/api/v1/product/delete',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -225,7 +226,7 @@ customRouter.post('/api/v1/inventory/deleteProduct',
   }
 );
 
-customRouter.post('/api/v1/category/createCategory',
+customRouter.post('/api/v1/category/create',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -238,7 +239,7 @@ customRouter.post('/api/v1/category/createCategory',
   }
 );
 
-customRouter.post('/api/v1/category/updateCategory',
+customRouter.post('/api/v1/category/update',
   async(ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -251,7 +252,7 @@ customRouter.post('/api/v1/category/updateCategory',
   }
 );
 
-customRouter.post('/api/v1/category/deleteCategory',
+customRouter.post('/api/v1/category/delete',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -264,7 +265,7 @@ customRouter.post('/api/v1/category/deleteCategory',
   }
 );
 
-customRouter.post('/api/v1/customer/createLocation',
+customRouter.post('/api/v1/location/create',
   async (ctx) => {
     //Consulta servicio para obtener token de acceso a cloudbiz
     ctx.res.statusCode = 200;
@@ -278,7 +279,7 @@ customRouter.post('/api/v1/customer/createLocation',
   }
 );
 
-customRouter.post('/api/v1/customer/updateLocation',
+customRouter.post('/api/v1/location/update',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -291,7 +292,7 @@ customRouter.post('/api/v1/customer/updateLocation',
   }
 );
 
-customRouter.post('/api/v1/customer/deleteLocation',
+customRouter.post('/api/v1/location/delete',
   async (ctx) => {
     ctx.res.statusCode = 200;
     const token = await getToken();
@@ -355,11 +356,9 @@ customRouter.post('/api/v1/customer/deleteCustomerGroup',
   }
 );
 
-
-
 //EndPoints Pendientes de Desarrollo Fin
 
 
 module.exports = {
-    customRouter
+  customRouter
 }

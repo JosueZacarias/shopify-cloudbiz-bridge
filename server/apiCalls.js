@@ -38,7 +38,8 @@ const {
   getToken,
   graphQLClient,
   pad,
-  getValue
+  getValue,
+  getCloudbizParams
 } = require('./appFunctions.js');
 const {
   insertCustomerRelationship,
@@ -229,7 +230,7 @@ const verifyCollectionsChangesOnCloudbiz = async () => {
 
 const verifyProductsChangesOnCloudbiz = async() => {
   try{
-    const RegexVariants = new RegExp(/([\w ]+) - ([\w\s]+)/g);
+    const RegexVariants = /(.)+ - (.)+/;
     var productCreationStatus = false;
     const token = await getToken();
     var cant = 10;
@@ -239,7 +240,7 @@ const verifyProductsChangesOnCloudbiz = async() => {
     var firestoreProductsCount = firestoreProductsCreated.length;
 
     //Datos de productos en Cloudbiz
-    var cloudbizProducts = await getCloudbizProductsArray(token,cant);
+    var cloudbizProducts = await getCloudbizProductsArray(token);
     var cloudbizProductsCount = cloudbizProducts.length;
 
     var shopifyProducts = await getShopifyProductsArray(cant,cursor);
@@ -250,14 +251,14 @@ const verifyProductsChangesOnCloudbiz = async() => {
     let arrayProductVariant = [];
     let arrayProductVariantGroup = [];
     cloudbizProducts.forEach(product => {
-      if(product.type === "product"){
-        if(RegexVariants.test(product.name)){
+      if(product.type === "product" && product.deleted_at == null){
+        if(sq = product.name.search(RegexVariants) !== -1){
           arrayProductVariant.push(product);
         }else{
           arrayProductUnique.push(product);
         }
       }
-    });
+    })
 
     /**/
     /*###############################*/
@@ -265,77 +266,120 @@ const verifyProductsChangesOnCloudbiz = async() => {
     /*###############################*/
     /**/
     cloudbizProducts.forEach(product => {
+      let arrayProductVariantCopy = [...arrayProductVariant];
+      let productsVariantObjects = {};
       var productId = product.id;
-      var ifUniqueProductName = product.name.split(" - ");
+      var ifUniqueProductName = "";
+      if(product.name != undefined) {
+        ifUniqueProductName = product.name.split(" - ");
+      }
       var group = [];
-      arrayProductVariant.forEach(variant => {
-        var variantProductName = variant.name.split(" - ");
+
+      arrayProductVariant.forEach((variant,index) => {
+        if(variant.name != undefined){
+          var variantProductName = "";
+          variantProductName = variant.name.split(" - ");
+        }
         if(ifUniqueProductName[0] == variantProductName[0]){
           group.push(variant);
+          arrayProductVariantCopy = arrayProductVariantCopy.filter((pr) => {
+            return pr.id !== variant.id;
+          });
         }
       });
-      arrayProductVariantGroup[productId] = group;
+      if(group.length > 0){
+        productsVariantObjects.id = productId;
+        productsVariantObjects.product = group;
+        arrayProductVariantGroup.push(productsVariantObjects);
+        arrayProductVariant = arrayProductVariantCopy;
+      }
     })
     var status = true;
     //if(cloudbizProductsCount > firestoreProductsCount && cloudbizProductsCount > shopifyProductsCount){
     if(status){
-      console.log("Creacion");
-      await Promise.all(cloudbizProducts.map(async item => {
-        if(item.type === "product"){
-          const principalProductData = async item => {
+      cloudbizProducts.forEach(item => {
+        if(item.type === "product" && item.deleted_at == null){
+          console.log("Creacion producto");
+          const getPrincipalData = async item => {
             var data = await getCloudbizProductInfoBasic(item);
             return data;
           }
-          //const principalProductData = await getCloudbizProductInfoBasic(item);
+          const principalProductData = getPrincipalData(item);
           const index = item.id;
           var variantsArray = [];
+          console.log(principalProductData);
 
           if(arrayProductVariantGroup.length > 0){
-            const getVariantsArray = async (arrayProductVariantGroup,index) => {
-
-            }
-            await Promise.all(arrayProductVariantGroup[index].map(async productData => {
-              var variantProductData = await getCloudbizProductInfoBasic(productData);
-              var variableObject = await createProductVariantVariable(variantProductData);
+            arrayProductVariantGroup[index].forEach(productData => {
+              const variantVariable = async (productData) => {
+                var variantProductData = await getCloudbizProductInfoBasic(productData);
+                var variableObject = await createProductVariantVariable(variantProductData);
+                return variableObject;
+              }
+              var variableObject = variantVariable(productData);
               variantsArray.push(variableObject);
-            }));
+            });
           }
-          console.log(variantsArray);
           if(variantsArray.length === 0 ){
-            var variableObject = await createProductVariantVariable(principalProductData,3);
+            const getVariable = async (productData,type) => {
+              const variable = await createProductVariantVariable(productData,type);
+              return variable;
+            }
+            var variableObject = getVariable(principalProductData,3);
             variantsArray.push(variableObject);
           }
-
-          const variables = await createProductVariable(principalProductData,variantsArray);
-          const createProduct = await graphQLClient(productCreateMutation,variables);
+          const mutationCreateProduct = async (productPrincipal,variants) => {
+            const variables = await createProductVariable(productPrincipal,variants);
+            const createProduct = await graphQLClient(productCreateMutation,variables);
+            return createProduct;
+          }
+          const queryProductVariant = async (id,cant) => {
+            const productVariantVariable = await specificElementWithCant(id,cant);
+            const productVariants = await graphQLClient(getAllProductVariantsByProduct,productVariantVariable);
+            return productVariants;
+          }
+          const insertIntoFireBase = async (
+                                            productId,
+                                            productVariantId,
+                                            index,
+                                            invetoryLevelId
+                                            ) => {
+            var insertFirebase = await insertProductRelationship(
+                                                                  productId,
+                                                                  productVariantId,
+                                                                  index,
+                                                                  invetoryLevelId
+                                                                );
+            return insertFirebase;
+          }
+          const createProduct = mutationCreateProduct(principalProductData,variantsArray);
           const searchProductId = ["productCreate","product","id"];
           const searchTotalVariants = ["productCreate","product","totalVariants"];
-          const productId = await getValue(searchProductId,createProduct);
-          const totalVariants = await getValue(searchTotalVariants,createProduct);
-          const productVariantVariable = await specificElementWithCant(productId,totalVariants);
-          const productVariants = await graphQLClient(getAllProductVariantsByProduct,productVariantVariable);
+          const productId = getValue(searchProductId,createProduct);
+          const totalVariants = getValue(searchTotalVariants,createProduct);
+          const productVariants = queryProductVariant(productId,totalVariants);
           const searchVariants = ["product","variants","edges"];
-          const allVariantsCreated = await getValue(searchVariants,productVariants);
+          const allVariantsCreated = getValue(searchVariants,productVariants);
 
-          await Promise.all(allVariantsCreated.map(async variant => {
+          allVariantsCreated.forEach(variant => {
             const searchProductVariandId = ["node","id"];
-            const productVariantId = await getValue(searchProductVariandId,variant);
+            const productVariantId = getValue(searchProductVariandId,variant);
             if(productVariantId != undefined){
               const searchInventoryLevelId = ["node","inventoryItem","inventoryLevels","edges",0,"node","id"];
-              var invetoryLevelId = await getValue(searchInventoryLevelId,variant);
-              var insertFirebase = await insertProductRelationship(
-                                                                              productId,
-                                                                              productVariantId,
-                                                                              index,
-                                                                              invetoryLevelId
-                                                                            );
+              var invetoryLevelId = getValue(searchInventoryLevelId,variant);
+              var insertFirebase = insertIntoFireBase(
+                                                                  productId,
+                                                                  productVariantId,
+                                                                  index,
+                                                                  invetoryLevelId
+                                                                );
               if(insertFirebase){
                 productCreationStatus = true;
               }
             }
-          }))
+          })
         }
-      }));
+      });
     }else if(cloudbizProductsCount == firestoreProductsCount && cloudbizProductsCount == shopifyProductsCount){
       //Identificar productos provenientes de cloudbiz con variantes
       console.log("Actualizacion");
@@ -348,7 +392,7 @@ const verifyProductsChangesOnCloudbiz = async() => {
           var productVariantVariable = await createProductVariantVariable(principalProductData,2);
           var createVariantProduct = await graphQLClient(productVariantUpdate,productVariantVariable);
           const searchProductVariandId = ["productVariantUpdate","productVariant","id"];
-          const productVariantId = await getValue(searchProductVariandId,createVariantProduct);
+          const productVariantId = getValue(searchProductVariandId,createVariantProduct);
           if(productVariantId !== undefined){
             //para establecer la cantidad de inventario del producto
             await Promise.all(item.inventory.warehouses.map(async warehouse => {
@@ -357,7 +401,7 @@ const verifyProductsChangesOnCloudbiz = async() => {
               var resultInventoryLevelId = await graphQLClient(getProductInventoryId,variableInventoryLevelId);
               if(resultInventoryLevelId != undefined){
                 const searchInventoryLevelId = ["productVariant","inventoryItem","inventoryLevel","id"];
-                inventoryLevelId = await getValue(searchInventoryLevelId,resultInventoryLevelId);
+                inventoryLevelId = getValue(searchInventoryLevelId,resultInventoryLevelId);
                 if(inventoryLevelId !== undefined){
                   var variableUpdate = await inventoryAdjustQuantity(inventoryLevelId,warehouse.available_stock);
                   var resultInventoryUpdate = await graphQLClient(productVariantInventoryUpdate,variableUpdate);
@@ -386,7 +430,7 @@ const verifyProductsChangesOnCloudbiz = async() => {
           var variables = await productVariableMutationDelete(deleted.data.shopifyReference);
           var query = await graphQLClient(productDeleteMutation,variables);
           const searchDeletedProductId = ["productDelete","deletedProductId"];
-          const deletedProductId = await getValue(searchDeletedProductId,query);
+          const deletedProductId = getValue(searchDeletedProductId,query);
           if(deletedProductId != undefined){
             await deleteCollectionRelationship(deletedProductId,null);
             productCreationStatus = true;
@@ -504,13 +548,12 @@ const getShopifyProductsArray = async (cant,cursor,variable = null) => {
     var shopifyProductsQuery = await graphQLClient(getAllShopifyProducts,variable);
     if(shopifyProductsQuery !== undefined){
       const searchHaveMore = ["products","pageInfo","hasNextPage"];
-      const haveMore = await getValue(searchHaveMore,shopifyProductsQuery);
+      const haveMore = getValue(searchHaveMore,shopifyProductsQuery);
       var shopifyProducts = [...shopifyProductsQuery.products.edges];
       shopifyProducts.map((product) => {
         shopifyProductVariants.push(...product.node.variants.edges);
       })
       if(haveMore){
-        cant += 10;
         var lastElement = shopifyProducts.pop();
         cursor = lastElement.cursor;
         variable = await productsAll(cant,cursor);
@@ -652,23 +695,30 @@ const getCloudbizCustomersArray = async (token,cant = 1) => {
   }
 };
 
-const getCloudbizProductsArray = async(token,cant = 1) => {
+const getCloudbizProductsArray = async(token) => {
   try{
     var products = [];
+    const limit = 500;
     const noNeedFields = [
       'deliver_pack',
       'only_pack',
-      'conversion_rate',
-      'deleted_at'
+      'conversion_rate'
     ];
-    var getProducts = await getAllCloudbizProducts(token,cant);
+    // Cambiar a traer todos los datos sin enviar cant
+    var getProducts = await getAllCloudbizProducts(token);
     if(getProducts !== undefined){
+      products= [...getProducts];
       var productsCount = getProducts.pop().rows;
-      if(productsCount > cant){
-        getProducts = await getAllCloudbizProducts(token,productsCount);
-        getProducts.pop();
-        getProducts = [...getProducts];
-        products = getProducts.map((item) => {
+      if(productsCount > limit){
+        const page = getCloudbizParams(productsCount);
+        
+        for(var i = 2; i < (page.totalPagesLeft + 2); i++){
+          getProducts = await getAllCloudbizProducts(token,i);
+          getProducts.pop();
+          products = [...products,...getProducts];
+        }
+        
+        products = products.map((item) => {
           noNeedFields.forEach((key) => {
             delete item[key];
           });
@@ -680,6 +730,8 @@ const getCloudbizProductsArray = async(token,cant = 1) => {
           });
           return item;
         });
+      }else{
+        products.pop();
       }
     }
     return products;
@@ -754,7 +806,7 @@ const getCloudbizProductInfoBasic = async item => {
     productData.bodega = bodega;
     productData.taxable = taxable;
     productData.sku = item.code;
-    productData.name = item.title;
+    productData.name = item.name;
     productData.type = item.type;
     productData.description = item.description;
     productData.published = (item.is_inventory == 1) ? true : false;
